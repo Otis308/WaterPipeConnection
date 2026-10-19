@@ -1,0 +1,714 @@
+body {
+  position: relative;
+
+  /* Nền game */
+  background-image: url("../Images/NenLon.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  height: 100vh;
+  margin: 0;
+
+  /* Font chữ */
+  font-family: "Chakra Petch", sans-serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* ======================================================================================================================== */
+/* BẢN ĐỒ GAME (MIN: 3x8, MAX: 5x12) */
+
+.KhungGame {
+  display: grid;
+  grid-template-rows: repeat(5, 110px);
+  grid-template-columns: repeat(12, 110px);
+  justify-content: center;
+  gap: 2px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  /* border: 1px solid white; */
+}
+.KhungGame-OVuong {
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  /* border: 1px solid greenyellow; */
+}
+.KhungGame-OVuong .AnhOngNuoc {
+  display: block;
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Kiểu con trỏ cho ống xanh */
+.KhungGame-OVuong.co-the-xoay {
+  cursor: pointer;
+}
+
+/* Kiểu con trỏ cho ống vàng */
+.KhungGame-OVuong.co-the-trao-doi {
+  cursor: grab;
+}
+/* Hiệu ứng phát sáng khi ống vàng được chọn */
+.KhungGame-OVuong.dang-chon-de-trao-doi {
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 15px 5px #ffd700;
+  cursor: grabbing;
+  z-index: 10;
+}
+
+/* Khi đang chạy chế độ đầu hàng tắt toàn bộ hiệu ứng con trỏ */
+.KhungGame.dang-chay-dau-hang .KhungGame-OVuong {
+  cursor: default !important;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* HIỆU ỨNG ỐNG NƯỚC (NƯỚC + ỐNG) */
+
+/* Ống Thẳng */
+.OngThang_Nuoc {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* Ống Chữ Thập */
+.Nuoc_NhanhDuoi,
+.Nuoc_NhanhTren,
+.Nuoc_NhanhTrai,
+.Nuoc_NhanhPhai,
+.Nuoc_Tam {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* Ống Chữ L */
+.OngChuL_Nuoc {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* Lớp bọc cho ống */
+.Ong-Wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease-in-out;
+}
+.Ong-Wrapper .AnhOngNuoc {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  transition: none;
+}
+
+/* Lớp SVG Nước */
+.Ong-Nuoc {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* ======================================================================================================================== */
+/* NÚT DỪNG */
+
+.NutDung {
+  position: absolute;
+  bottom: 5px;
+  left: 13px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.NutDung img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG DỪNG */
+
+.KhungDung {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 260px;
+  height: 230px;
+  border: 10px solid #6dd1f9;
+  border-radius: 10px;
+  z-index: 3;
+}
+.BangDung {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background-image: url("../Images/NenCaroDo.jpg");
+  border: 5px solid #663300;
+}
+
+.LopPhu_BangDung {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* Nút Tiếng */
+.Dung-NutTieng {
+  position: absolute;
+  top: 27.5%;
+  left: 23%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.Dung-NutTieng img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Nhạc */
+.Dung-NutNhac {
+  position: absolute;
+  top: 72%;
+  left: 23%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.Dung-NutNhac img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Trang chủ */
+.Dung-NutTrangChu {
+  position: absolute;
+  top: 27.5%;
+  right: -6.2%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.Dung-NutTrangChu img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Tải lại */
+.Dung-NutTaiLai {
+  position: absolute;
+  top: 72%;
+  right: -6.2%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.Dung-NutTaiLai img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Thoát */
+.Dung-NutThoat {
+  position: absolute;
+  top: 103%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.Dung-NutThoat img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* ======================================================================================================================== */
+/* NÚT ĐẦU HÀNG */
+
+.NutDauHang {
+  cursor: pointer;
+  position: absolute;
+  bottom: 20px;
+  left: 97px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #e10000;
+  background-color: #f3f3f3;
+  border-radius: 15px;
+  border: 3px solid #e10000;
+  transition: background-color 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+.NutDauHang:hover {
+  color: #f3f3f3;
+  background-color: #e10000;
+  border-radius: 15px;
+  border: 3px solid #f3f3f3;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG ĐẦU HÀNG */
+
+.KhungDauHang {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 140px;
+  border: 10px solid #6dd1f9;
+  border-radius: 10px;
+  z-index: 3;
+}
+.BangDauHang {
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+  width: 100%;
+  height: 100%;
+  font-size: 30px;
+  font-weight: 600;
+  color: #f3f3f3;
+  background-image: url("../Images/NenCaroDo.jpg");
+  border: 5px solid #663300;
+}
+
+.LopPhu_BangDauHang {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* Nút Thoát */
+.DauHang-NutThoat {
+  position: absolute;
+  top: 103%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.DauHang-NutThoat img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Yes/No */
+.DauHang-Yes {
+  cursor: pointer;
+  position: absolute;
+  top: 103%;
+  left: 78%;
+  transform: translate(-50%, -50%);
+  padding: 5px 13px;
+  font-size: 25px;
+  font-weight: 600;
+  color: #00b90c;
+  background-color: #f3f3f3;
+  border-radius: 15px;
+  border: 3px solid #00b90c;
+  transition: background-color 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+.DauHang-Yes:hover {
+  color: #f3f3f3;
+  background-color: #00b90c;
+  border: 3px solid #f3f3f3;
+}
+.DauHang-No {
+  cursor: pointer;
+  position: absolute;
+  top: 103%;
+  left: 22.5%;
+  transform: translate(-50%, -50%);
+  text-decoration: none;
+  padding: 5px 13px;
+  font-size: 25px;
+  font-weight: 600;
+  color: #0059ff;
+  background-color: #f3f3f3;
+  border-radius: 15px;
+  border: 3px solid #0059ff;
+  transition: background-color 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+.DauHang-No:hover {
+  color: #f3f3f3;
+  background-color: #0059ff;
+  border: 3px solid #f3f3f3;
+}
+
+/* ======================================================================================================================== */
+/* NÚT CHI TIẾT */
+
+.NutChiTiet {
+  position: absolute;
+  bottom: 5px;
+  right: 13px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.NutChiTiet img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG CHI TIẾT */
+
+.KhungChiTiet {
+  display: none;
+  position: absolute;
+  bottom: 5px;
+  right: 97px;
+  width: auto;
+  height: 120px;
+  border: 10px solid #6dd1f9;
+  border-radius: 10px;
+  z-index: 1;
+}
+.BangChiTiet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 0 40px;
+  width: 100%;
+  height: 100%;
+  font-size: 24px;
+  font-weight: 600;
+  color: #f3f3f3;
+  background-image: url("../Images/NenCaroDo.jpg");
+  border: 5px solid #663300;
+}
+.BangChiTiet ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  /* border: 1px solid greenyellow; */
+}
+.BangChiTiet ul li {
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+}
+.ChiTiet-ChuThuong {
+  font-size: 22px;
+  font-weight: normal;
+}
+
+/* ======================================================================================================================== */
+/* ỐNG SAO */
+
+.OngSao {
+  position: absolute;
+  top: 0px;
+  left: 50%;
+  transform: translate(-50%, 0%);
+}
+.OngSao img {
+  width: 250px;
+  height: auto;
+  display: block;
+}
+
+/* Số sao */
+.OngSao-Sao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  transform: translate(-50%, 0%);
+  font-size: 20px;
+  color: white;
+  /* border: 1px solid greenyellow; */
+}
+.OngSao-Sao img {
+  width: 25px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ỐNG PHỤ */
+
+.OngPhuTrai {
+  position: absolute;
+  top: 0px;
+  left: 566px;
+  transform: translate(-50%, 0%);
+}
+.OngPhuPhai {
+  position: absolute;
+  top: 0px;
+  left: 970px;
+  transform: translate(-50%, 0%);
+}
+.OngPhuTrai img,
+.OngPhuPhai img {
+  width: 125px;
+  height: auto;
+  display: block;
+}
+
+/* ======================================================================================================================== */
+/* ỐNG THỜI GIAN */
+
+.OngThoiGian {
+  position: absolute;
+  top: 50%;
+  right: 0px;
+  transform: translate(0%, -50%);
+}
+.OngThoiGian svg {
+  width: 100px;
+  height: auto;
+  display: block;
+}
+
+.OngThoiGian_Nuoc {
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+}
+
+/* ======================================================================================================================== */
+/* BẢNG KẾT THÚC */
+
+.KhungKetThuc {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 220px;
+  border: 10px solid #6dd1f9;
+  border-radius: 10px;
+  z-index: 3;
+  transition: all 0.3s ease;
+}
+.BangKetThuc {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background-image: url("../Images/NenCaroDo.jpg");
+  border: 5px solid #663300;
+}
+
+.LopPhu_BangKetThuc {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* Nút trở về Trang Chủ */
+.KetThuc-NutTrangChu {
+  position: absolute;
+  top: 103%;
+  left: 29%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.KetThuc-NutTrangChu img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Chơi lại */
+.KetThuc-NutChoiLai {
+  position: absolute;
+  top: 103%;
+  left: 71%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.KetThuc-NutChoiLai img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* Số sao Cao nhất*/
+.KetThuc-CupSao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translate(-50%, 0%);
+  font-size: 25px;
+  color: white;
+  /* border: 1px solid greenyellow; */
+}
+.KetThuc-CupSao img {
+  width: 30px;
+  height: auto;
+  display: block;
+}
+
+/* Số sao */
+.KetThuc-Sao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 75px;
+  left: 50%;
+  transform: translate(-50%, 0%);
+  font-size: 35px;
+  color: white;
+  /* border: 1px solid greenyellow; */
+}
+.KetThuc-Sao img {
+  width: 45px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG THÔNG TIN CHẾ ĐỘ AI */
+
+.KetThuc-ThongTinAI {
+  display: none;
+}
+.KetThuc-ThongTinAI p {
+  margin: 0;
+}
+.KetThuc-ThongTinAI p span {
+  font-size: 22px;
+  font-weight: 400;
+}
+
+/* Bảng hiện khi ở chế độ AI */
+.KhungKetThuc.CheDoAI {
+  width: 400px !important;
+  height: 425px !important;
+}
+.KhungKetThuc.CheDoAI .KetThuc-ThongTinAI {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  position: absolute;
+  top: 148px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  color: #f3f3f3;
+  font-size: 24px;
+  font-weight: 600;
+  /* border: 1px solid greenyellow; */
+}
+
+/* Nút trở về Trang Chủ trong chế độ AI */
+.KhungKetThuc.CheDoAI .KetThuc-NutTrangChu {
+  left: 30% !important;
+  top: 101% !important;
+}
+
+/* Nút Chơi lại trong chế độ AI */
+.KhungKetThuc.CheDoAI .KetThuc-NutChoiLai {
+  left: 70% !important;
+  top: 101% !important;
+}
+
+/* ======================================================================================================================== */
+/* HIỆU ỨNG HOVER VÀO NÚT */
+
+.NutDung::before,
+.NutChiTiet::before,
+.Dung-NutTieng::before,
+.Dung-NutNhac::before,
+.Dung-NutTrangChu::before,
+.Dung-NutTaiLai::before,
+.Dung-NutThoat::before,
+.DauHang-NutThoat::before,
+.KetThuc-NutTrangChu::before,
+.KetThuc-NutChoiLai::before {
+  content: "";
+  position: absolute;
+  inset: 1.5%;
+  border-radius: 50%;
+  background-color: #ffffff4d;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 1;
+}
+
+.NutDung:hover::before,
+.NutChiTiet:hover::before,
+.Dung-NutTieng:hover::before,
+.Dung-NutNhac:hover::before,
+.Dung-NutTrangChu:hover::before,
+.Dung-NutTaiLai:hover::before,
+.Dung-NutThoat:hover::before,
+.DauHang-NutThoat:hover::before,
+.KetThuc-NutTrangChu:hover:before,
+.KetThuc-NutChoiLai:hover:before {
+  cursor: pointer;
+  opacity: 1;
+}
+
+/* ======================================================================================================================== */

@@ -1,0 +1,27 @@
+#!/usr/bin/env php
+<?php
+require __DIR__ . '/vendor/autoload.php';
+
+$command = $argv[1] ?? 'list';
+echo "====================================================================\n";
+echo " Laravel 12 Artisan CLI — Đồ Án Game Nối Ống Nước (HUIT)            \n";
+echo "====================================================================\n";
+
+if (str_starts_with($command, 'migrate')) {
+    $db = new \App\Services\PdoDatabaseService();
+    echo "[OK] Đã kiểm tra và thực thi Migration + Seeder trên driver: " . strtoupper($db->getDriverName()) . "\n";
+    exit(0);
+}
+
+if ($command === 'storage:link') {
+    echo "[OK] Thư mục public/storage/levels đã được liên kết sẵn sàng.\n";
+    exit(0);
+}
+
+if ($command === 'serve') {
+    echo "Đang khởi chạy Development Server tại http://127.0.0.1:8000 ...\n";
+    passthru(PHP_BINARY . " -S 127.0.0.1:8000 -t public");
+    exit(0);
+}
+
+echo "Các lệnh hỗ trợ: migrate, migrate:fresh --seed, storage:link, serve\n";

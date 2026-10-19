@@ -1,0 +1,36 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+ <g>
+  <title>Layer 1</title>
+  <g id="svg_17">
+   <g id="OngChuL_Cum1">
+    <rect x="72.5" y="180" width="55" height="11" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="72.5" y="170" width="55" height="11" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="72.5" y="160" width="55" height="11" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="72.5" y="150" width="55" height="11" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="72.5" y="140" width="55" height="11" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="72.5" y="130" width="55" height="11" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="72.5" y="120" width="55" height="11" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc"/>
+   </g>
+   <g id="OngChuL_Cum2">
+    <rect x="72.5" y="120.44993" width="59" height="10" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc" transform="rotate(20 102 125.45)"/>
+    <rect x="73.5" y="114.69993" width="59" height="10" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc" transform="rotate(28 103 119.7)"/>
+    <rect x="76.19314" y="108.48586" width="61" height="13" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc" transform="rotate(36 106.693 114.986)"/>
+    <rect x="79.99999" y="105.44994" width="61" height="10" fill="#01caee" stroke-width="0" class="OngChuL_Nuoc" transform="rotate(46 110.5 110.45)"/>
+   </g>
+   <g id="OngChuL_Cum3">
+    <rect x="120" y="72.5" width="11" height="55" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="130" y="72.5" width="11" height="55" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="140" y="72.5" width="11" height="55" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="150" y="72.5" width="11" height="55" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="160" y="72.5" width="11" height="55" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="170" y="72.5" width="11" height="55" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc"/>
+    <rect x="180" y="72.5" width="11" height="55" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc"/>
+   </g>
+   <g id="OngChuL_Cum4">
+    <rect x="108" y="76.65" width="13" height="61" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc" transform="rotate(-37 114.5 107.15)"/>
+    <rect x="115" y="73.4" width="10" height="60" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc" transform="rotate(-28 120 103.4)"/>
+    <rect x="120.25" y="71.9" width="10" height="60" fill="#01caee" stroke="null" stroke-width="0" class="OngChuL_Nuoc" transform="rotate(-20 125.25 101.9)"/>
+   </g>
+  </g>
+ </g>
+</svg>

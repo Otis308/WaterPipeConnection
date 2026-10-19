@@ -1,0 +1,45 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg" class="Ong-Nuoc">
+ <g>
+  <g id="NhanhDuoi">
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="179.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="169.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="159.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="149.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="139.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="129.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="119.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="109.5" width="55" height="11" class="Nuoc_NhanhDuoi"/>
+  </g>
+
+  <g id="NhanhTren">
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="9.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="19.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="29.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="39.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="49.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="59.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="69.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+   <rect fill="#01caee" stroke-width="0" x="72.5" y="79.5" width="55" height="11" class="Nuoc_NhanhTren"/>
+  </g>
+
+  <g id="NhanhTrai">
+   <rect x="10" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhTrai"/>
+   <rect x="20" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhTrai"/>
+   <rect x="30" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhTrai"/>
+   <rect x="40" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhTrai"/>
+   <rect x="50" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhTrai"/>
+   <rect x="60" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhTrai"/>
+  </g>
+
+  <g id="NhanhPhai">
+   <rect x="180" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhPhai"/>
+   <rect x="170" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhPhai"/>
+   <rect x="160" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhPhai"/>
+   <rect x="150" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhPhai"/>
+   <rect x="140" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhPhai"/>
+   <rect x="130" y="72.5" width="11" height="55" fill="#01caee" stroke-width="0" class="Nuoc_NhanhPhai"/>
+  </g>
+  
+  <rect x="72.5" y="72.5" width="55" height="55" fill="#01caee" stroke-width="0" class="Nuoc_Tam" style="opacity: 0; transition: opacity 0.2s;"/>
+ </g>
+</svg>
