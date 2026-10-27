@@ -5,9 +5,9 @@ color 0B
 
 cd /d "%~dp0"
 
-echo ============================================================================
-echo   KHOI CHAY TU DONG DO AN GAME NOI ONG NUOC TRONG DOCKER - HUIT LARAVEL 12
-echo ============================================================================
+echo ===========================================================
+echo   KHOI CHAY TU DONG DO AN GAME NOI ONG NUOC TRONG DOCKER 
+echo ===========================================================
 echo.
 
 echo [BUOC 1/6] Kiem tra trang thai Docker Desktop...
@@ -87,23 +87,18 @@ echo.
 
 echo [BUOC 6/6] Dang mo trinh duyet truy cap du an...
 start http://localhost:8000
-start http://localhost:8000/portal
+start http://localhost:8000/admin
 start http://localhost:8081
 
 color 0A
 echo ============================================================================
 echo   HOAN TAT! TOAN BO DU AN DANG CHAY TRONG DOCKER:
 echo   1. Giao dien Game goc:         http://localhost:8000
-echo   2. Cong Quan tri MVC / RBAC:   http://localhost:8000/portal
-echo   3. Quan ly CRUD Man choi:      http://localhost:8000/levels
-echo   4. Phong Lab PDO SQL nang cao: http://localhost:8000/pdo-lab
-echo   5. Phong Lab OOP PHP:          http://localhost:8000/oop-lab
+echo   2. Cong Admin                  http://localhost:8000/admin (đăng nhập bằng tài khoản admin, sau đó chỉnh URL thêm "/admin")
 echo   6. Quan ly CSDL phpMyAdmin:    http://localhost:8081 [root / rootpassword]
 echo.
 echo   Tai khoan Demo [Mat khau chung: password123]:
 echo   - Admin:  admin
-echo   - Staff:  staff
-echo   - Player: player1
 echo ============================================================================
 pause
 exit /b 0
