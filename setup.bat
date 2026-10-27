@@ -94,7 +94,7 @@ color 0A
 echo ============================================================================
 echo   HOAN TAT! TOAN BO DU AN DANG CHAY TRONG DOCKER:
 echo   1. Giao dien Game goc:         http://localhost:8000
-echo   2. Cong Admin                  http://localhost:8000/admin (đăng nhập bằng tài khoản admin, sau đó chỉnh URL thêm "/admin")
+echo   2. Cong Admin                  http://localhost:8000/admin (dang nhap bang tai khoan admin, sau do chinh URL them "/admin")
 echo   6. Quan ly CSDL phpMyAdmin:    http://localhost:8081 [root / rootpassword]
 echo.
 echo   Tai khoan Demo [Mat khau chung: password123]:
