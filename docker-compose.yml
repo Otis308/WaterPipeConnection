@@ -1,0 +1,71 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: huit_pipegame_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      APP_NAME: "Water Pipe Connection - HUIT Laravel 12"
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: huit_water_pipe_db
+      DB_USERNAME: root
+      DB_PASSWORD: rootpassword
+      WEBSOCKET_BROADCAST_URL: http://host.docker.internal:8080/broadcast
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - db
+    networks:
+      - huit_pipe_net
+
+  db:
+    image: mysql:8.0
+    container_name: huit_pipegame_mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: huit_water_pipe_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/sql/huit_water_pipe_db.sql:/docker-entrypoint-initdb.d/01_huit_water_pipe_db.sql
+    networks:
+      - huit_pipe_net
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: huit_pipegame_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - huit_pipe_net
+
+volumes:
+  db_data:
+
+networks:
+  huit_pipe_net:
+    driver: bridge

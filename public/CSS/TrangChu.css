@@ -1,0 +1,943 @@
+body {
+  position: relative;
+
+  /* Nền game */
+  background-image: url("../Images/NenLon.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  height: 100vh;
+  margin: 0;
+
+  /* Font chữ */
+  font-family: "Chakra Petch", sans-serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* ======================================================================================================================== */
+/* TÊN GAME */
+
+.TenGame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #f3f3f3;
+  text-shadow: 5px 5px #000000;
+  font-size: 100px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  /* border: 1px solid greenyellow; */
+}
+
+/* ======================================================================================================================== */
+/* NÚT ĐĂNG NHẬP/ĐĂNG KÝ */
+
+.NutDangNhap {
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5px 13px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: auto;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  background-color: #f3f3f3;
+  border: 3px solid #0059ff;
+  border-radius: 15px;
+  transition: background-color 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+.NutDangNhap:hover {
+  color: #f3f3f3;
+  background-color: #0059ff;
+  border: 3px solid #f3f3f3;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG ĐĂNG NHẬP/ĐĂNG KÝ */
+
+.KhungDangNhap {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px;
+  height: 520px;
+  border: 8px solid #0059ff;
+  border-radius: 10px;
+  z-index: 3;
+}
+.BangDangNhap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  width: 100%;
+  height: 100%;
+  background-color: #f3f3f3;
+  /* border: 1px solid red; */
+}
+.BangDangKy {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  width: 100%;
+  height: 100%;
+  background-color: #f3f3f3;
+  /* border: 1px solid red; */
+}
+
+.LopPhu_BangDangNhap {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* Nút Thoát */
+.DangNhap-NutThoat {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.DangNhap-NutThoat img {
+  cursor: pointer;
+  width: 60px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG ĐĂNG NHẬP */
+
+.DangNhap-Ten {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 40px 0 22px 0;
+  width: auto;
+  height: auto;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #0059ff;
+  /* border: 1px solid red; */
+}
+
+/* Tên Tài Khoản */
+.DangNhap-TenTK {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  /* border: 1px solid red; */
+}
+.DangNhap-TenTK input {
+  padding: 3px 5px;
+  font-size: 18px;
+  font-weight: normal;
+  color: #000000;
+  border: 2px solid #0059ff;
+  border-radius: 10px;
+}
+
+/* Mật Khẩu */
+.DangNhap-MatKhau {
+  display: flex;
+  flex-direction: column;
+  margin-top: 15px;
+  width: 300px;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  /* border: 1px solid red; */
+}
+.DangNhap-MatKhau input {
+  box-sizing: border-box;
+  padding: 3px 40px 3px 5px;
+  width: 100%;
+  font-size: 18px;
+  font-weight: normal;
+  color: #000000;
+  border: 2px solid #0059ff;
+  border-radius: 10px;
+}
+
+/* Nút Đăng Nhập */
+.DangNhap-Nut {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 45px;
+  padding: 5px 0;
+  width: 300px;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  background-color: #ffffff;
+  border: 2px solid #0059ff;
+  border-radius: 10px;
+  transition: background-color 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+.DangNhap-Nut:hover {
+  color: #ffffff;
+  background-color: #0059ff;
+  border: 2px solid #ffffff;
+}
+
+/* Quên mật khẩu & Đăng ký */
+.DangNhap-ThongTin {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 5px;
+  margin-left: -66px;
+  color: #000000;
+  /* border: 1px solid red; */
+}
+.DangNhap-ThongTin a {
+  color: #0059ff;
+}
+.DangNhap-ThongTin a:hover {
+  color: #e10000;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG ĐĂNG KÝ */
+
+.DangKy-Ten {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 40px 0 22px 0;
+  width: auto;
+  height: auto;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #0059ff;
+  /* border: 1px solid red; */
+}
+
+/* Tên Tài Khoản */
+.DangKy-TenTK {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  /* border: 1px solid red; */
+}
+.DangKy-TenTK input {
+  padding: 3px 5px;
+  font-size: 18px;
+  font-weight: normal;
+  color: #000000;
+  border: 2px solid #0059ff;
+  border-radius: 10px;
+}
+
+/* Mật Khẩu */
+.DangKy-MatKhau {
+  display: flex;
+  flex-direction: column;
+  margin-top: 15px;
+  width: 300px;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  /* border: 1px solid red; */
+}
+.DangKy-MatKhau input {
+  box-sizing: border-box;
+  padding: 3px 40px 3px 5px;
+  width: 100%;
+  font-size: 18px;
+  font-weight: normal;
+  color: #000000;
+  border: 2px solid #0059ff;
+  border-radius: 10px;
+}
+
+/* Xác nhận Mật Khẩu */
+.DangKy-XnMatKhau {
+  display: flex;
+  flex-direction: column;
+  margin-top: 15px;
+  width: 300px;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  /* border: 1px solid red; */
+}
+.DangKy-XnMatKhau input {
+  box-sizing: border-box;
+  padding: 3px 40px 3px 5px;
+  width: 100%;
+  font-size: 18px;
+  font-weight: normal;
+  color: #000000;
+  border: 2px solid #0059ff;
+  border-radius: 10px;
+}
+
+/* Nút Đăng Nhập */
+.DangKy-Nut {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 45px;
+  padding: 5px 0;
+  width: 300px;
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0059ff;
+  background-color: #ffffff;
+  border: 2px solid #0059ff;
+  border-radius: 10px;
+  transition: background-color 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+.DangKy-Nut:hover {
+  color: #ffffff;
+  background-color: #0059ff;
+  border: 2px solid #ffffff;
+}
+
+/* Đăng nhập */
+.DangKy-ThongTin {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 5px;
+  margin-left: -55px;
+  color: #000000;
+  /* border: 1px solid red; */
+}
+.DangKy-ThongTin a {
+  color: #0059ff;
+}
+.DangKy-ThongTin a:hover {
+  color: #e10000;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ICON MẮT (HIỆN/ẨN MẬT KHẨU) */
+
+.MatKhau {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.MatKhau-Eye {
+  cursor: pointer;
+  position: absolute;
+  top: 53%;
+  right: 11px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: auto;
+}
+
+/* ======================================================================================================================== */
+/* NÚT PLAY */
+
+.NutPlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.NutPlay img {
+  cursor: pointer;
+  width: 220px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG PLAY */
+
+.KhungPlay {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 500px;
+  border: 10px solid #6dd1f9;
+  border-radius: 10px;
+  z-index: 3;
+}
+.BangPlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0f172a 0%, #6398cb 50%, #090d16 100%);
+  border: 5px solid #663300;
+}
+
+.LopPhu_BangPlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* Nút Thoát */
+.Play-NutThoat {
+  position: absolute;
+  top: 103%;
+  left: 31%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.Play-NutThoat img {
+  cursor: pointer;
+  width: 65px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Play */
+.Play-NutPlay {
+  position: absolute;
+  top: 103%;
+  left: 69%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.Play-NutPlay img {
+  cursor: pointer;
+  width: 65px;
+  height: auto;
+  display: block;
+}
+
+/* Chế Độ */
+.BangPlay-CheDo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 15px;
+  gap: 5px;
+  /* border: 1px solid greenyellow; */
+}
+.CheDo-Ten {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #f3f3f3;
+}
+.CheDo-TuyChon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  width: auto;
+  height: auto;
+  background-color: #f3f3f3;
+  border-radius: 23px;
+  /* border: 1px solid #00ffee; */
+}
+.CheDo-Player,
+.CheDo-AI {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+  width: 100px;
+  font-size: 20px;
+  border-radius: 15px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.CheDo-Player {
+  color: #0059ff;
+  background-color: transparent;
+  border: 2px solid #0059ff;
+}
+.CheDo-Player:hover,
+.CheDo-Player.active {
+  cursor: pointer;
+  color: #f3f3f3;
+  background-color: #0059ff;
+  border: 2px solid #0059ff;
+}
+.CheDo-AI {
+  color: #e10000;
+  background-color: transparent;
+  border: 2px solid #e10000;
+}
+.CheDo-AI:hover,
+.CheDo-AI.active {
+  cursor: pointer;
+  color: #f3f3f3;
+  background-color: #e10000;
+  border: 2px solid #e10000;
+}
+
+/* Khung Bản Đồ & Độ Khó */
+.BangPlay-BanDo-DoKho {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  /* border: 1px solid greenyellow; */
+}
+.BangPlay-BanDo,
+.BangPlay-DoKho {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* border: 1px solid white; */
+}
+.BanDo-TuyChon input[type="radio"],
+.DoKho-TuyChon input[type="radio"] {
+  accent-color: #0059ff;
+}
+
+/* Bản Đồ */
+.BanDo-Ten {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #f3f3f3;
+}
+.BanDo-TuyChon {
+  margin: 0 0 0 10px;
+  color: #f3f3f3;
+  font-size: 20px;
+  /* border: 1px solid #6dd1f9; */
+}
+.BanDo-Random,
+.BanDo-Custom {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+}
+.BanDo-Random input,
+.BanDo-Custom input {
+  grid-column: 1;
+  grid-row: 1;
+}
+.BanDo-Random label,
+.BanDo-Custom label {
+  cursor: pointer;
+  grid-column: 2;
+  grid-row: 1;
+}
+.BanDo-Custom .Custom-DanhSach {
+  grid-column: 2;
+  grid-row: 2;
+}
+/* Danh sách Bản đồ Custom */
+.BanDo-Custom .dropdown-toggle {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 8px;
+  width: 80px;
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 16px;
+  color: #000000 !important;
+  background-color: #f3f3f3 !important;
+  border-radius: 12px !important;
+}
+.BanDo-Custom .dropdown-menu {
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 16px;
+  color: #000000;
+  background-color: #f3f3f3;
+  max-height: 120px;
+  overflow-y: auto;
+  min-width: 80px;
+  border-radius: 12px;
+}
+.BanDo-Custom .dropdown-item {
+  padding: 2px 8px;
+  color: #000000;
+}
+.BanDo-Custom .dropdown-item:hover {
+  color: #000000;
+  background-color: #00dcd9;
+}
+
+/* Độ Khó */
+.DoKho-Ten {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #f3f3f3;
+}
+.DoKho-TuyChon {
+  margin: 0 0 0 10px;
+  color: #f3f3f3;
+  font-size: 20px;
+  /* border: 1px solid #6dd1f9; */
+}
+.DoKho-Easy,
+.DoKho-Medium,
+.DoKho-Hard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+}
+.DoKho-Easy input,
+.DoKho-Medium input,
+.DoKho-Hard input {
+  grid-column: 1;
+  grid-row: 1;
+}
+.DoKho-Easy label,
+.DoKho-Medium label,
+.DoKho-Hard label {
+  cursor: pointer;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* ======================================================================================================================== */
+/* NÚT CÀI ĐẶT */
+
+.NutCaiDat {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.NutCaiDat img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG CÀI ĐẶT */
+
+.KhungCaiDat {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 230px;
+  height: 170px;
+  border: 10px solid #6dd1f9;
+  border-radius: 10px;
+  z-index: 3;
+}
+.BangCaiDat {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background-image: url("../Images/NenCaroDo.jpg");
+  border: 5px solid #663300;
+}
+
+.LopPhu_BangCaiDat {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* Nút Tắt tiếng */
+.CaiDat-NutTieng {
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.CaiDat-NutTieng img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Tắt nhạc */
+.CaiDat-NutNhac {
+  position: absolute;
+  top: 50%;
+  right: -8.2%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.CaiDat-NutNhac img {
+  cursor: pointer;
+  width: 70px;
+  height: auto;
+  display: block;
+}
+
+/* Nút Thoát */
+.CaiDat-NutThoat {
+  position: absolute;
+  top: 103%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.CaiDat-NutThoat img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* ======================================================================================================================== */
+/* NÚT XẾP HẠNG */
+
+.NutXepHang {
+  position: absolute;
+  bottom: 10px;
+  left: 103px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.NutXepHang img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* BẢNG XẾP HẠNG */
+
+.KhungXepHang {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 550px;
+  height: 550px;
+  border: 10px solid #6dd1f9;
+  border-radius: 10px;
+  z-index: 3;
+}
+.BangXepHang {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  width: 100%;
+  height: 100%;
+  background-image: url("../Images/NenCaroDo.jpg");
+  border: 5px solid #663300;
+}
+
+.LopPhu_BangXepHang {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* Nút Thoát */
+.XepHang-NutThoat {
+  position: absolute;
+  top: 101%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.XepHang-NutThoat img {
+  cursor: pointer;
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* Tên Bảng */
+.XepHang-Ten {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0 12px 0;
+  width: auto;
+  height: auto;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #f3f3f3;
+  /* border: 1px solid greenyellow; */
+}
+
+/* Thông Tin Bảng */
+.XepHang-ThongTin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 95%;
+  height: 75%;
+  /* border: 1px solid greenyellow; */
+}
+.XepHang-Hang,
+.XepHang-TenNguoiChoi,
+.XepHang-DiemCaoNhat,
+.XepHang-TiLeThang {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  height: 100%;
+  color: #f3f3f3;
+  /* border: 1px solid white; */
+}
+.XepHang-Hang {
+  width: 10%;
+}
+.XepHang-TenNguoiChoi {
+  width: 35%;
+}
+.XepHang-DiemCaoNhat {
+  width: 30%;
+}
+.XepHang-TiLeThang {
+  width: 25%;
+}
+
+/* Dữ Liệu Bảng */
+.Hang-Ten,
+.TenNguoiChoi-Ten,
+.DiemCaoNhat-Ten,
+.TiLeThang-Ten {
+  margin-bottom: 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+.XepHang-Hang p,
+.XepHang-TenNguoiChoi p,
+.XepHang-DiemCaoNhat p,
+.XepHang-TiLeThang p {
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 3px 0;
+  width: 100%;
+  font-size: 18px;
+  /* border: 1px solid greenyellow; */
+}
+
+/* ======================================================================================================================== */
+/* HIỆU ỨNG HOVER VÀO NÚT */
+
+.DangNhap-NutThoat::before,
+.NutXepHang::before,
+.XepHang-NutThoat::before,
+.NutPlay::before,
+.NutCaiDat::before,
+.Play-NutThoat::before,
+.Play-NutPlay::before,
+.CaiDat-NutTieng::before,
+.CaiDat-NutNhac::before,
+.CaiDat-NutThoat::before {
+  content: "";
+  position: absolute;
+  inset: 1.5%;
+  border-radius: 50%;
+  background-color: #ffffff4d;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 1;
+}
+
+.DangNhap-NutThoat:hover::before,
+.NutXepHang:hover::before,
+.XepHang-NutThoat:hover::before,
+.NutPlay:hover::before,
+.NutCaiDat:hover::before,
+.Play-NutThoat:hover::before,
+.Play-NutPlay:hover::before,
+.CaiDat-NutTieng:hover::before,
+.CaiDat-NutNhac:hover::before,
+.CaiDat-NutThoat:hover::before {
+  cursor: pointer;
+  opacity: 1;
+}
+
+/* ======================================================================================================================== */
+/* SỐ SAO CAO NHẤT */
+
+.CupSao {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  bottom: 10px;
+  right: 10px;
+  color: #f3f3f3;
+  text-shadow: 2px 2px #000000;
+  font-size: 40px;
+  font-weight: 500;
+  /* border: 1px solid greenyellow; */
+}
+.CupSao img {
+  width: 90px;
+  height: auto;
+}
+
+/* ======================================================================================================================== */

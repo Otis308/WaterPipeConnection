@@ -1,0 +1,27 @@
+/* Only PvP chat opts into flow layout, reserving space below the entire board. */
+body.pvp-chat-enabled { height: auto; min-height: 100vh; padding: 100px 12px 100px; box-sizing: border-box; }
+.pvp-chat-enabled .KhungGame {
+  --pvp-cell: min(110px, calc((100vw - 48px) / 12));
+  position: relative; top: auto; left: auto; transform: none; margin: 0 auto;
+  width: max-content;
+  grid-template-columns: repeat(12, var(--pvp-cell));
+  grid-template-rows: repeat(5, var(--pvp-cell));
+}
+.pvp-chat { max-width: 560px; margin: 24px auto 0; padding: 10px; color: #e2e8f0; background: #0f172a; border: 1px solid #38bdf8; border-radius: 10px; box-sizing: border-box; font-size: 14px; }
+.pvp-chat [hidden], .pvp-chat[hidden] { display: none !important; }
+.pvp-chat button { border: 1px solid #64748b; border-radius: 6px; background: #1e293b; color: #f8fafc; padding: 6px 10px; cursor: pointer; }
+.pvp-chat button:disabled { opacity: .55; cursor: default; }
+.pvp-chat .pvp-chat-toggle { width: 100%; text-align: left; color: #7dd3fc; font-weight: bold; }
+.pvp-chat-messages { list-style: none; padding: 8px; margin: 8px 0; height: 180px; overflow-y: auto; overscroll-behavior: contain; }
+.pvp-chat-messages li { width: 90%; margin: 0 auto 8px 0; padding: 7px; border-radius: 6px; background: #293548; overflow-wrap: anywhere; }
+.pvp-chat-messages li.pvp-chat-mine { margin-left: auto; margin-right: 0; background: #164e63; border-right: 3px solid #38bdf8; }
+.pvp-chat-messages small { display: block; color: #cbd5e1; }
+.pvp-chat-messages p { margin: 3px 0 0; white-space: pre-wrap; }
+.pvp-chat-compose { display: flex; gap: 8px; align-items: stretch; }
+.pvp-chat textarea { min-width: 0; flex: 1; resize: vertical; max-height: 150px; background: #020617; color: #fff; border: 1px solid #64748b; border-radius: 6px; padding: 6px; }
+.pvp-chat label { display: block; margin-bottom: 4px; }
+#pvpChatStatus { font-size: 12px; margin: 6px 0; }
+@media (max-width: 600px) {
+  body.pvp-chat-enabled { padding-top: 135px; }
+  .pvp-chat { width: 100%; }
+}
