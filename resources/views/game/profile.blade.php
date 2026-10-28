@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hồ sơ của tôi · Water Pipe Connection</title>
     <link rel="stylesheet" href="/Bootstrap/CSS/bootstrap.min.css">
@@ -11,6 +12,18 @@
 </head>
 <body>
 <main class="container profile-shell py-4">
+    <?php
+        // Khai báo giá trị mặc định để tránh cảnh báo Undefined variable từ Intelephense
+        $notice       = $notice ?? null;
+        $loadError    = $loadError ?? false;
+        $profile      = $profile ?? ['avatar_url' => '', 'name' => '', 'username' => '', 'created_at' => '', 'email' => '', 'bio' => ''];
+        $old          = $old ?? [];
+        $avatarReady  = $avatarReady ?? false;
+        $soloStats    = $soloStats ?? null;
+        $pvpStats     = $pvpStats ?? null;
+        $source       = $source ?? 'solo';
+        $history      = $history ?? ['available' => false, 'items' => [], 'page' => 1, 'pages' => 1];
+    ?>
     <nav class="d-flex flex-wrap justify-content-between gap-2 mb-3" aria-label="Điều hướng">
         <a href="/" class="btn btn-light">← Trang chủ</a>
         <a href="/TrangGame.html" class="btn btn-light">Chơi game</a>

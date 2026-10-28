@@ -1650,3 +1650,35 @@ a:hover {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--border-light);
 }
+/* Khắc phục lỗi giao diện trang chủ trên màn hình điện thoại */
+@media screen and (max-width: 768px) {
+    /* 1. Thu nhỏ tiêu đề game để không bị tràn chữ */
+    .TenGame {
+        font-size: 24px !important; /* Thu nhỏ chữ cho vừa màn hình điện thoại */
+        width: 100% !important;
+        text-align: center;
+        padding: 0 10px;
+        box-sizing: border-box;
+        top: 15px !important; /* Căn chỉnh lại vị trí hiển thị phía trên */
+    }
+
+    /* 2. Xử lý khoảng trắng thừa ở dưới cùng và ép nền phủ kín màn hình */
+    body, html {
+        height: 100% !important;
+        min-height: 100vh !important;
+        overflow-x: hidden !important;
+        background-color: #0f172a; /* Màu nền dự phòng tránh khoảng trắng */
+    }
+
+    /* Đảm bảo khung nền game bao phủ toàn bộ thiết bị di động */
+    .background, .TrangChu-Container, body {
+        background-size: cover !important;
+        background-repeat: no-repeat !important;
+        min-height: 100vh !important;
+    }
+
+    /* 3. Cân chỉnh lại vị trí nút Play và thanh menu phía dưới cho hợp lý trên mobile */
+    .NutPlay {
+        transform: scale(0.85); /* Thu nhỏ nút play một chút cho cân đối */
+    }
+}

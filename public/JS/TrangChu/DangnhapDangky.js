@@ -22,29 +22,6 @@ function dongDangNhap() {
     bangDangNhap.style.display = "flex";
   }, 200);
 }
-
-// Gán sự kiện click
-nutDangNhap.addEventListener("click", function () {
-  const userHienTai = localStorage.getItem("userHienTai");
-  if (userHienTai) {
-    // Nếu đang đăng nhập thì hỏi đăng xuất
-    if (typeof customConfirm !== 'undefined') {
-      customConfirm("Bạn có chắc chắn muốn đăng xuất không?", "Xác nhận đăng xuất").then((xacNhan) => {
-        if (xacNhan) {
-          dangXuat();
-        }
-      });
-    } else {
-      const xacNhan = confirm("Bạn có chắc chắn muốn đăng xuất không?");
-      if (xacNhan) {
-        dangXuat();
-      }
-    }
-  } else {
-    // Nếu chưa đăng nhập thì mở bảng
-    moDangNhap();
-  }
-});
 dangNhap_NutThoat.addEventListener("click", dongDangNhap);
 
 // ----------------------------------------------------------------------------------------------------------------------------

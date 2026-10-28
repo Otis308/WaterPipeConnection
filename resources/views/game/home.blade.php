@@ -2,13 +2,13 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Game Nối Ống Nước</title>
 
     <!-- Bootstrap -->
     <link rel="stylesheet" href="Bootstrap/CSS/bootstrap.min.css" />
     <script src="Bootstrap/JS/bootstrap.bundle.min.js"></script>
-    <script src="JS/custom-modal.js"></script>
 
     <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -240,7 +240,7 @@
         <div class="DangKy-Ten">ĐĂNG KÝ</div>
         <div class="DangKy-TenTK">
           Tên đăng nhập (Username)
-          <input id="dk_Username" placeholder="3-30 ký tự (chữ, số, dấu _)" autocomplete="username" />
+          <input id="dk_Username" placeholder="Nhập username của bạn" autocomplete="username" />
         </div>
         <div class="DangKy-Email">
           Địa chỉ Email
@@ -705,7 +705,7 @@
                 }
               });
             } else {
-              if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi tài khoản '" + window.currentAuthenticatedUser.username + "' không?")) {
+              if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi tài khoản '" + window.currentAuthenticatedUser.username + "'?")) {
                 performLogout();
               }
             }
@@ -820,16 +820,16 @@
             showAlert("Vui lòng nhập đầy đủ cả 4 trường thông tin bắt buộc.", "error");
             return;
           }
-          if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
-            showAlert("Tên đăng nhập phải từ 3–30 ký tự (chữ cái, số hoặc dấu _).", "error");
+          if (!/^(?=.*[a-zA-Z])(?=.*[0-9])[a-zA-Z0-9]{3,30}$/.test(username)) {
+            showAlert("Tên đăng nhập phải bao gồm cả chữ cái và chữ số, không chứa ký tự đặc biệt.", "error");
             return;
           }
           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             showAlert("Địa chỉ email không đúng định dạng hợp lệ.", "error");
             return;
           }
-          if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
-            showAlert("Mật khẩu phải từ 8 ký tự trở lên, gồm cả chữ cái và chữ số.", "error");
+          if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            showAlert("Mật khẩu phải từ 8 ký tự trở lên, gồm cả chữ cái, chữ số và ký tự đặc biệt.", "error");
             return;
           }
           if (password !== confirmPassword) {
@@ -1096,6 +1096,7 @@
     <!-- REAL-TIME PVP WEBSOCKET VÀ LOBBY MANAGER -->
     <script src="JS/TrangGame/PvpSocket.js"></script>
     <script src="JS/TrangChu/PvpLobby.js"></script>
+    <script src="JS/custom-modal.js"></script>
 
     <!-- LOGIC TAB BẢNG XẾP HẠNG PVP REAL-TIME -->
     <script>

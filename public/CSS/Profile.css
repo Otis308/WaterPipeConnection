@@ -19,7 +19,15 @@ body {
 .profile-panel .table { --bs-table-bg: transparent; min-width: 650px; }
 .profile-panel input, .profile-panel textarea { border-color: #91b7ff; }
 @media (max-width: 575px) {
+    .profile-shell { max-width: 100%; }
     .profile-panel { padding: 1rem; }
     .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .profile-title { font-size: 1.8rem; }
+    .profile-title { font-size: 1.5rem; }
+    .profile-panel h2 { font-size: 1.3rem; }
+    .profile-stats strong { font-size: 1.2rem; }
+}
+
+@media (max-width: 360px) {
+    .profile-stats { grid-template-columns: 1fr; }
+    .profile-title { font-size: 1.2rem; }
 }

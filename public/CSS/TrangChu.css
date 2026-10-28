@@ -52,6 +52,7 @@ body {
   border: 3px solid #0059ff;
   border-radius: 15px;
   transition: background-color 0.2s ease, color 0.2s ease, border 0.2s ease;
+  z-index: 10;
 }
 .NutDangNhap:hover {
   color: #f3f3f3;
@@ -406,7 +407,7 @@ body {
   gap: 20px;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #0f172a 0%, #6398cb 50%, #090d16 100%);
+  background-image: url("../Images/NenCaroDo.jpg");
   border: 5px solid #663300;
 }
 
@@ -941,3 +942,82 @@ body {
 }
 
 /* ======================================================================================================================== */
+@media screen and (max-width: 768px) {
+    /* Ép nền phủ kín màn hình điện thoại, chống tràn ngang */
+    body, html {
+        height: 100vh !important;
+        width: 100vw !important;
+        overflow: hidden !important;
+        background-size: cover !important;
+        background-position: center center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* 1. Thu nhỏ tiêu đề game vừa khít màn hình dọc */
+    .TenGame {
+        font-size: min(40px, 8vw) !important;
+        height: auto !important;
+        padding: 10px 0;
+        margin-top: 10vh !important;
+        text-shadow: 2px 2px #000000 !important;
+        letter-spacing: 1px !important;
+    }
+
+    /* 2. Thu nhỏ và đặt lại vị trí nút Play ở giữa màn hình */
+    .NutPlay {
+        transform: translate(-50%, -50%) scale(0.75) !important;
+    }
+    .NutPlay img {
+        width: 160px !important;
+    }
+
+    /* 3. Cố định hàng nút menu phía dưới (Cài đặt, Xếp hạng, Cup Sao) không bị trôi */
+    .NutCaiDat {
+        bottom: 15px !important;
+        left: 10px !important;
+    }
+    .NutCaiDat img, .NutXepHang img {
+        width: 55px !important;
+    }
+    .NutXepHang {
+        bottom: 15px !important;
+        left: 75px !important;
+    }
+    .CupSao {
+        bottom: 15px !important;
+        right: 10px !important;
+        font-size: 24px !important;
+    }
+    .CupSao img {
+        width: 50px !important;
+    }
+
+    /* 4. Adjust login/signup modal for mobile */
+    .KhungDangNhap {
+        width: 90% !important;
+        max-width: 340px !important;
+        height: auto !important;
+        max-height: 85vh !important;
+    }
+    .DangNhap-TenTK, .DangNhap-MatKhau {
+        width: 90% !important;
+    }
+    .DangNhap-Nut {
+        width: 90% !important;
+    }
+    .CheDo-Ten, .BanDo-Ten, .DoKho-Ten {
+        font-size: 18px !important;
+    }
+    .CheDo-TuyChon {
+        transform: scale(0.9);
+    }
+    .BangPlay-BanDo-DoKho {
+        gap: 20px !important;
+        font-size: 14px !important;
+    }
+    .NutDangNhap {
+        font-size: 16px !important;
+        padding: 4px 10px !important;
+    }
+}

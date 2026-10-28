@@ -7,7 +7,10 @@ body {
   background-repeat: no-repeat;
   background-position: center center;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height */
   margin: 0;
+  padding: 0;
+  overflow: hidden;
 
   /* Font chữ */
   font-family: "Chakra Petch", sans-serif;
@@ -15,21 +18,50 @@ body {
   font-style: normal;
 }
 
+html {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Container wrapper for layout */
+.game-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+
 /* ======================================================================================================================== */
 /* BẢN ĐỒ GAME (MIN: 3x8, MAX: 5x12) */
 
 .KhungGame {
   display: grid;
-  grid-template-rows: repeat(5, 110px);
-  grid-template-columns: repeat(12, 110px);
+  /* Fluid cell size using clamp() for responsive scaling */
+  --cell-size: clamp(32px, min(11vh, 90vw / 12), 110px);
+  grid-template-rows: repeat(5, var(--cell-size));
+  grid-template-columns: repeat(12, var(--cell-size));
   justify-content: center;
-  gap: 2px;
+  align-content: center;
+  gap: clamp(1px, 0.5vmin, 2px);
+  
+  /* Center on screen with safe boundaries */
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: auto;
-  height: auto;
+  width: max-content;
+  height: max-content;
+  max-width: calc(95vmin - 40px);
+  max-height: calc(95vmin - 40px);
+  
+  /* Prevent overflow */
+  box-sizing: border-box;
   /* border: 1px solid white; */
 }
 .KhungGame-OVuong {
@@ -712,3 +744,353 @@ body {
 }
 
 /* ======================================================================================================================== */
+/* Responsive design for mobile phones and tablets */
+
+/* Mobile phones (iPhone 16 Pro Max and similar) - width up to 430px */
+@media screen and (max-width: 430px) {
+  /* 1. Ensure full viewport coverage without white space */
+  html, body {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-size: cover !important;
+    background-position: center center !important;
+  }
+
+  /* 2. Optimize game grid for smaller screens */
+  .KhungGame {
+    --cell-size: clamp(28px, 8vw, 45px) !important;
+    grid-template-rows: repeat(5, var(--cell-size)) !important;
+    grid-template-columns: repeat(12, var(--cell-size)) !important;
+    gap: 1px !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    max-width: calc(95vw - 30px) !important;
+    max-height: calc(95vw - 30px) !important;
+  }
+
+  /* 3. Scale top UI elements to avoid overlap */
+  .OngSao {
+    transform: translate(-50%, 0) scale(0.55) !important;
+    top: -10px !important;
+  }
+
+  .OngPhuTrai, .OngPhuPhai {
+    transform: translate(-50%, 0) scale(0.6) !important;
+  }
+
+  /* 4. Position bottom controls within safe touch zone */
+  .NutDung {
+    bottom: 15px !important;
+    left: 12px !important;
+  }
+  .NutDung img {
+    width: 45px !important;
+  }
+
+  .NutDauHang {
+    bottom: 25px !important;
+    left: 65px !important;
+    font-size: 12px !important;
+    padding: 3px 6px !important;
+    border-radius: 10px !important;
+    border: 2px solid #e10000 !important;
+  }
+
+  .NutChiTiet {
+    bottom: 15px !important;
+    right: 12px !important;
+  }
+  .NutChiTiet img {
+    width: 45px !important;
+  }
+
+  /* 5. Scale time indicator */
+  .OngThoiGian {
+    transform: scale(0.65) translate(8px, -50%) !important;
+    top: 55% !important;
+    right: 3px !important;
+  }
+  .OngThoiGian svg {
+    width: 70px !important;
+  }
+
+  /* 6. Adjust end game board */
+  .KetThuc-Sao {
+    font-size: 22px !important;
+  }
+  .KetThuc-CupSao {
+    font-size: 18px !important;
+  }
+  .KhungKetThuc {
+    width: 90vw !important;
+    max-width: 320px !important;
+  }
+}
+
+/* Tablets (iPad Pro 13-inch and similar) - width from 431px to 1024px */
+@media screen and (min-width: 431px) and (max-width: 1024px) {
+  html, body {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-size: cover !important;
+    background-position: center center !important;
+  }
+
+  .KhungGame {
+    --cell-size: clamp(38px, 9vh, 80px) !important;
+    gap: 2px !important;
+    max-width: calc(90vw - 40px) !important;
+    max-height: calc(90vh - 60px) !important;
+  }
+
+  .OngSao {
+    transform: translate(-50%, 0) scale(0.75) !important;
+    top: 0 !important;
+  }
+
+  .OngPhuTrai, .OngPhuPhai {
+    transform: translate(-50%, 0) scale(0.85) !important;
+  }
+
+  .NutDung {
+    bottom: 20px !important;
+    left: 18px !important;
+  }
+  .NutDung img {
+    width: 55px !important;
+  }
+
+  .NutDauHang {
+    bottom: 25px !important;
+    left: 85px !important;
+    font-size: 14px !important;
+    padding: 5px 10px !important;
+  }
+
+  .NutChiTiet {
+    bottom: 20px !important;
+    right: 18px !important;
+  }
+  .NutChiTiet img {
+    width: 55px !important;
+  }
+
+  .OngThoiGian {
+    transform: scale(0.85) translate(12px, -50%) !important;
+    top: 50% !important;
+    right: 8px !important;
+  }
+  .OngThoiGian svg {
+    width: 85px !important;
+  }
+
+  .KetThuc-Sao {
+    font-size: 30px !important;
+  }
+  .KetThuc-CupSao {
+    font-size: 22px !important;
+  }
+}
+
+/* Landscape orientation adjustments for all mobile/tablet devices */
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .KhungGame {
+    --cell-size: clamp(30px, 7vh, 70px) !important;
+    max-width: calc(98vw - 40px) !important;
+    max-height: calc(75vh - 80px) !important;
+  }
+
+  .OngSao {
+    transform: translate(-50%, 0) scale(0.7) !important;
+  }
+
+  .NutDung {
+    bottom: 10px !important;
+    left: 10px !important;
+  }
+
+  .NutChiTiet {
+    bottom: 10px !important;
+    right: 10px !important;
+  }
+
+  .NutDauHang {
+    bottom: 15px !important;
+  }
+
+  .OngThoiGian {
+    transform: scale(0.8) translate(5px, -50%) !important;
+    right: 2px !important;
+  }
+}
+
+/* PvP Chat panel adjustments for smaller screens */
+@media screen and (max-width: 768px) {
+  .pvp-chat {
+    width: 320px !important;
+    max-height: 40vh !important;
+  }
+  
+  #hudMultiPipePanel {
+    top: 5px !important;
+    left: 50% !important;
+    transform: translateX(-50%) scale(0.85) !important;
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+  }
+  
+  #pvpScoreboardPanel {
+    width: 260px !important;
+    top: 60px !important;
+    right: 10px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Larger tablets in landscape mode */
+@media screen and (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .KhungGame {
+    max-height: calc(80vh - 100px) !important;
+    --cell-size: clamp(40px, 8vh, 80px) !important;
+  }
+  
+  #hudMultiPipePanel {
+    top: 10px !important;
+    font-size: 14px !important;
+  }
+  
+  #pvpScoreboardPanel {
+    width: 300px !important;
+    top: 60px !important;
+  }
+}
+
+/* Large tablets (iPad Pro 13-inch) - width 1024px and up */
+@media screen and (min-width: 1024px) {
+  html, body {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-size: cover !important;
+    background-position: center center !important;
+  }
+
+  .KhungGame {
+    --cell-size: clamp(45px, 9vh, 110px) !important;
+    gap: 2px !important;
+    max-width: calc(90vw - 60px) !important;
+    max-height: calc(90vh - 100px) !important;
+  }
+
+  .OngSao {
+    transform: translate(-50%, 0) scale(1) !important;
+    top: 0 !important;
+  }
+
+  .OngPhuTrai, .OngPhuPhai {
+    transform: translate(-50%, 0) scale(1) !important;
+  }
+
+  .NutDung {
+    bottom: 20px !important;
+    left: 20px !important;
+  }
+  .NutDung img {
+    width: 60px !important;
+  }
+
+  .NutDauHang {
+    bottom: 25px !important;
+    left: 90px !important;
+    font-size: 16px !important;
+    padding: 5px 12px !important;
+  }
+
+  .NutChiTiet {
+    bottom: 20px !important;
+    right: 20px !important;
+  }
+  .NutChiTiet img {
+    width: 60px !important;
+  }
+
+  .OngThoiGian {
+    transform: scale(1) translate(15px, -50%) !important;
+    top: 50% !important;
+    right: 10px !important;
+  }
+  .OngThoiGian svg {
+    width: 100px !important;
+  }
+
+  #hudMultiPipePanel {
+    top: 15px !important;
+    font-size: 14px !important;
+  }
+  
+  #pvpScoreboardPanel {
+    width: 320px !important;
+    top: 70px !important;
+    right: 15px !important;
+    font-size: 13px !important;
+  }
+  
+  .pvp-chat {
+    width: 350px !important;
+    max-height: 45vh !important;
+  }
+}
+
+/* Ultra-wide tablets in landscape */
+@media screen and (min-width: 1024px) and (orientation: landscape) {
+  .KhungGame {
+    --cell-size: clamp(50px, 8vh, 110px) !important;
+    max-width: calc(80vw - 80px) !important;
+    max-height: calc(75vh - 120px) !important;
+  }
+  
+  #hudMultiPipePanel {
+    top: 20px !important;
+    left: 50% !important;
+  }
+  
+  #pvpScoreboardPanel {
+    width: 300px !important;
+    top: 25px !important;
+    right: 20px !important;
+  }
+}
+
+/* Add hints for hint and AI solve buttons */
+#nutGoiY {
+  z-index: 900;
+}
+
+@media screen and (max-width: 430px) {
+  #nutGoiY {
+    font-size: 14px !important;
+    padding: 6px 12px !important;
+    right: 10px !important;
+    bottom: 45px !important;
+  }
+  
+  #nutDauHang[title="Nhờ AI tự động hoàn thành các đường ống ngắn nhất"] {
+    bottom: 45px !important;
+    left: 65px !important;
+    font-size: 11px !important;
+  }
+}
+
