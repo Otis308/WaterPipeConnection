@@ -166,11 +166,11 @@
                                     <small>{{ $winRate }}%</small>
                                 </td>
                                 <td>
-                                    @if($isActive === 1)
-                                        <span class="admin-badge success">Đang hoạt động</span>
-                                    @else
-                                        <span class="admin-badge error">Đã bị khóa</span>
-                                    @endif
+                                        @if($isActive === 1)
+                                            <span class="admin-badge success">Đang hoạt động</span>
+                                        @else
+                                            <span class="admin-badge error">Đã khóa</span>
+                                        @endif
                                 </td>
                                 <td>
                                     <form method="POST" action="/admin/users/{{ $u['id'] }}/role" class="d-inline-flex gap-1 align-items-center">
@@ -182,28 +182,41 @@
                                         <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm">Lưu</button>
                                     </form>
                                 </td>
-                                <td class="text-end">
-                                    <div class="admin-action-menu">
-                                        <button class="admin-kebab-btn">⋮</button>
-                                        <div class="menu-dropdown">
-                                            <a href="#" class="menu-item" data-user-id="{{ $u['id'] }}" data-username="{{ $u['username'] }}" onclick="viewUserPvpHistoryFromMenu(this)">
-                                                <span></span> Lịch sử PvP
-                                            </a>
-                                            <div class="menu-divider"></div>
-                                            <form method="POST" action="/admin/users/{{ $u['id'] }}/toggle-active" class="d-inline">
-                                                @csrf
-                                                @if($isActive === 1)
-                                                    <button type="submit" class="menu-item danger">
-                                                        <span></span> Khóa tài khoản
-                                                    </button>
-                                                @else
-                                                    <button type="submit" class="menu-item success">
-                                                        <span></span> Mở khóa
-                                                    </button>
-                                                @endif
-                                            </form>
-                                        </div>
-                                    </div>
+
+                                <td>
+                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                {{-- Nút khóa / mở khóa --}}
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('admin.users.toggle_active', ['id' => $u['id']]) }}"
+                                                    onsubmit="return confirm('{{ $isActive === 1 ? 'Bạn có chắc chắn muốn khóa tài khoản này?' : 'Bạn có chắc chắn muốn mở khóa tài khoản này?' }}');"
+                                                >
+                                                    @csrf
+
+                                                    @if($isActive === 1)
+                                                        <button type="submit" class="admin-btn admin-btn-sm"
+                                                                style="background: #dc3545; color: #fff; border: 1px solid #dc3545;">
+                                                            Khóa
+                                                        </button>
+                                                    @else
+                                                        <button type="submit" class="admin-btn admin-btn-sm"
+                                                                style="background: #198754; color: #fff; border: 1px solid #198754;">
+                                                            Mở
+                                                        </button>
+                                                    @endif
+                                                </form>
+
+                                                {{-- Giữ lại chức năng lịch sử PvP --}}
+                                                <button
+                                                    type="button"
+                                                    class="admin-btn admin-btn-secondary admin-btn-sm"
+                                                    data-user-id="{{ $u['id'] }}"
+                                                    data-username="{{ $u['username'] }}"
+                                                    onclick="viewUserPvpHistoryFromMenu(this)"
+                                                >
+                                                    Lịch sử PvP
+                                                </button>
+                                            </div>
                                 </td>
                             </tr>
                         @endforeach

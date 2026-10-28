@@ -52,7 +52,7 @@ Route::get('/auth/quick-switch/{username}', [AuthController::class, 'quickSwitch
 
 // 6. Route Group khu vực Quản trị (Bài 7 Slide 7 & Bài 9 Slide 15)
 Route::prefix('admin')
-    ->middleware(['web', 'auth', 'admin'])
+    ->middleware(['web', 'auth','admin'])
     ->group(function () {
         Route::post('/users/{id}/role', [AuthController::class, 'updateRole'])->name('admin.users.role');
         Route::post('/users/{id}/toggle-active', [AuthController::class, 'toggleActive'])->name('admin.users.toggle_active');

@@ -5,7 +5,7 @@ use App\Http\Middleware\CheckRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-
+use App\Http\Middleware\CheckUserActive;
 /**
  * Cấu hình khởi tạo ứng dụng chuẩn Laravel 12 (Bài 9 - Slide 14):
  * Đăng ký Middleware alias ('admin', 'role') tập trung tại bootstrap/app.php bằng ->withMiddleware()
@@ -21,9 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => CheckAdmin::class,
             'role'  => CheckRole::class,
+            'active' => CheckUserActive::class,
         ]);
+        $middleware->web(append: [\App\Http\Middleware\CheckUserActive::class,]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })
     ->create();
+

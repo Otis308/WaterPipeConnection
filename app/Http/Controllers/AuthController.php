@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
+
 class AuthController extends Controller
 {
     public function showLogin()
@@ -33,9 +34,20 @@ class AuthController extends Controller
             $user = Auth::user();
 
             // Kiểm tra tài khoản có bị khóa không
-            if ($user->is_active != 1) {
+            if (
+                $user
+                && $user->role === 'user'
+                && (int) $user->is_active !== 1
+            ) {
                 Auth::logout();
-                return back()->with('flash_error', 'Tài khoản này đã bị khóa. Vui lòng liên hệ quản trị viên.');
+
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')->with(
+                    'flash_error',
+                    'Tài khoản của bạn đã bị khóa.'
+                );
             }
 
             // Admin → chuyển thẳng sang trang Admin
@@ -147,18 +159,46 @@ class AuthController extends Controller
 
     public function toggleActive(int $id)
     {
-        $currentUser = $_SESSION['huit_auth_user'] ?? null;
-        if (!$currentUser || ($currentUser['role'] ?? '') !== 'admin') {
-            abort(403, 'Chỉ Quản trị viên (Admin) mới có quyền khóa/mở khóa tài khoản.');
-        }
+            //Đăng nhập bằng Laravel Auth
+            $currentUser = Auth::user();
 
-        $db = new \App\Services\PdoDatabaseService();
-        $res = $db->toggleUserActive($id);
-        if ($res['success']) {
-            $_SESSION['flash_success'] = $res['message'];
-        } else {
-            $_SESSION['flash_error'] = $res['message'];
-        }
-        return redirect('/admin');
+            //Chỉ Admin mới được thao tác
+            if (!$currentUser || $currentUser->role !== 'admin') {
+                abort(403, 'Chỉ Admin mới có quyền khóa/mở khóa tài khoản.');
+            }
+
+            //Tìm tài khoản cần thao tác
+            $targetUser = User::find($id);
+
+            if (!$targetUser) {
+                return redirect('/admin')->with(
+                    'flash_error',
+                    'Không tìm thấy tài khoản cần thao tác.'
+                );
+            }
+
+            //Chỉ cho phép khóa,mở khóa người chơi
+            if ($targetUser->role !== 'user') {
+                return redirect('/admin')->with(
+                    'flash_error',
+                    'Chỉ được phép khóa hoặc mở khóa tài khoản người chơi.'
+                );
+            }
+
+            $db = new \App\Services\PdoDatabaseService();
+            $res = $db->toggleUserActive($id);
+
+            //Thông báo kết quả
+            if ($res['success']) {
+                return redirect('/admin')->with(
+                    'flash_success',
+                    $res['message']
+                );
+            }
+
+            return redirect('/admin')->with(
+                'flash_error',
+                $res['message']
+            );
     }
 }
