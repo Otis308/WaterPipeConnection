@@ -433,6 +433,12 @@
                             <h3 class="mb-0">Preview Bản Đồ</h3>
                             <span id="configHashBadge" class="admin-badge secondary">Hash: --</span>
                         </div>
+                        <div class="d-flex gap-2 flex-wrap mb-3">
+                            <button type="button" id="portalReplay" class="admin-btn admin-btn-secondary" disabled>Xem cách giải</button>
+                            <button type="button" id="portalReset" class="admin-btn admin-btn-secondary" disabled>Đặt lại</button>
+                            <button type="button" id="portalSave" class="admin-btn admin-btn-primary" disabled>Thêm vào quản lý màn chơi</button>
+                        </div>
+                        <p id="portalReplayStatus" aria-live="polite"></p>
                         <div id="seedPreviewContainer" style="background: var(--bg); min-height: 380px; border-radius: var(--border-radius-sm); padding: 20px;">
                             <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="min-height: 340px;">
                                 <div class="text-center">
@@ -553,7 +559,9 @@
                 <h5 class="modal-title">+ Tạo Màn Chơi Mới</h5>
                 <button type="button" class="close-btn" data-bs-dismiss="modal">×</button>
             </div>
-            <form method="POST" action="{{ route('levels.store') }}">
+            <form method="POST" id="portalCreateLevelForm" action="{{ route('levels.store') }}">
+                <input type="hidden" name="portal_generated_hash" value="">
+                <p id="portalGeneratedNotice" class="px-3" aria-live="polite"></p>
                 @csrf
                 <div class="modal-body">
                     <div class="row g-3">
@@ -625,6 +633,7 @@
 </div>
 
 @push('scripts')
+<script src="/JS/TrangGame/PortalMapPreview.js"></script>
 <script>
 function viewUserPvpHistory(userId, username) {
     document.getElementById('modalUsername').textContent = username;
@@ -686,13 +695,169 @@ function generateRandomSeed() {
     document.getElementById('testSeedInput').value = seed;
 }
 
-function runSeedGenerator(e) {
+async function runSeedGenerator(e) {
     e.preventDefault();
-    showToast('Đang sinh bản đồ...', 'info');
-    // Add your seed generation logic here
-    setTimeout(() => {
-        showToast('Đã sinh bản đồ thành công!', 'success');
-    }, 1000);
+
+    const button = document.getElementById('btnRunSeed');
+    const preview = document.getElementById('seedPreviewContainer');
+    const badge = document.getElementById('configHashBadge');
+
+    if (button.disabled) return;
+
+    const oldLabel = button.textContent;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    button.disabled = true;
+    window.PortalMapPreview.clear();
+    button.textContent = 'Đang sinh và kiểm tra...';
+    preview.textContent = 'Đang sinh bản đồ và kiểm tra lời giải...';
+    badge.textContent = 'Hash: --';
+
+    try {
+        const response = await fetch('/api/admin/portal-map', {
+            method: 'POST',
+            credentials: 'same-origin',
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN':
+                    document.querySelector('meta[name="csrf-token"]')
+                        ?.content || ''
+            },
+            body: JSON.stringify({
+                seed: document.getElementById('testSeedInput').value.trim(),
+                map_size: document.getElementById('testMapSize').value,
+                num_pairs: Number(
+                    document.getElementById('testNumPairs').value
+                ),
+                difficulty:
+                    document.getElementById('testDifficulty').value
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Sinh bản đồ thất bại.');
+        }
+
+        const { map, verification } = result.data;
+        const [rows, cols] = map.mapSizeKey.split('x').map(Number);
+        const minR = Math.min(...map.cells.map(cell => cell.r));
+        const minC = Math.min(...map.cells.map(cell => cell.c));
+
+        preview.replaceChildren();
+        preview.style.overflowX = 'auto';
+
+        const summary = document.createElement('p');
+        summary.textContent = verification.solvable
+            ? '✓ Có lời giải — đã kiểm tra bằng thao tác hợp lệ.'
+            : 'Chưa xác nhận lời giải.';
+        preview.appendChild(summary);
+
+        const optimality = document.createElement('p');
+        optimality.textContent =
+            verification.optimality.status === 'proven'
+                ? 'Bộ giải đã chứng minh được chuẩn tối ưu.'
+                : 'Chưa chứng minh tối ưu trong giới hạn tìm kiếm.';
+        preview.appendChild(optimality);
+
+        const counts = verification.counts;
+        const legend = document.createElement('p');
+        legend.textContent =
+            `Xanh: ${counts.green} · Vàng: ${counts.yellow}` +
+            ` · Đỏ: ${counts.red} · Tường: ${counts.wall}` +
+            ' · S: bắt đầu · E: kết thúc';
+        preview.appendChild(legend);
+
+        const grid = document.createElement('div');
+        grid.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(${cols}, 52px);
+            grid-template-rows: repeat(${rows}, 52px);
+            gap: 3px;
+            width: max-content;
+            padding: 8px;
+            background: #111827;
+            border-radius: 8px;
+        `;
+
+        for (const cell of map.cells) {
+            const tile = document.createElement('div');
+            tile.style.cssText = `
+                position: relative;
+                width: 52px;
+                height: 52px;
+                background: #243247;
+                border: 1px solid #475569;
+                box-sizing: border-box;
+            `;
+            tile.style.gridRow = String(cell.r - minR + 1);
+            tile.style.gridColumn = String(cell.c - minC + 1);
+
+            const image = document.createElement('img');
+            image.src = '/Images/svg/Ong/' + cell.file;
+            image.alt = cell.role || cell.shape || 'Tường';
+            image.draggable = false;
+            image.style.cssText = `
+                display: block;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            `;
+            image.style.transform =
+                `rotate(${cell.initialRot || 0}deg)`;
+
+            tile.appendChild(image);
+
+            if (cell.role === 'start' || cell.role === 'end') {
+                const pair = map.pipes.find(
+                    item => item.pairId === cell.pairId
+                );
+
+                tile.style.borderColor = pair?.color?.hex || '#ffffff';
+
+                const label = document.createElement('span');
+                label.textContent =
+                    (cell.role === 'start' ? 'S' : 'E') + cell.pairId;
+                label.style.cssText = `
+                    position: absolute;
+                    top: 1px;
+                    left: 1px;
+                    padding: 1px 3px;
+                    border-radius: 3px;
+                    background: #ffffff;
+                    color: #111827;
+                    font-size: 11px;
+                    font-weight: bold;
+                `;
+                tile.appendChild(label);
+            }
+
+            grid.appendChild(tile);
+        }
+
+        preview.appendChild(grid);
+
+        badge.textContent = 'Hash: ' + map.configHash.slice(0, 12);
+        badge.title = map.configHash;
+        window.PortalMapPreview.load(result.data);
+
+        showToast('Đã sinh bản đồ có lời giải!', 'success');
+    } catch (error) {
+        const message = error.name === 'AbortError'
+            ? 'Yêu cầu quá thời gian. Hãy thử lại.'
+            : error.message;
+
+        preview.textContent = message;
+        showToast(message, 'error');
+    } finally {
+        clearTimeout(timeout);
+        button.disabled = false;
+        button.textContent = oldLabel;
+    }
 }
 </script>
 @endpush

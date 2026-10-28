@@ -94,7 +94,115 @@ if (str_starts_with($requestUri, '/api/')) {
             })(),
         };
     }
+    // Sinh bản đồ riêng cho portal, không thay generator PvP.
+    if ($requestUri === '/api/admin/portal-map') {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
 
+        $respond = static function (int $status, array $body): void {
+            http_response_code($status);
+            echo json_encode($body, JSON_UNESCAPED_UNICODE);
+            exit;
+        };
+
+        $user = $_SESSION['huit_auth_user'] ?? null;
+
+        if (!is_array($user) || ($user['role'] ?? '') !== 'admin') {
+            $respond(403, [
+                'success' => false,
+                'message' => 'Chỉ quản trị viên được sinh bản đồ.',
+            ]);
+        }
+
+        if ($httpMethod !== 'POST') {
+            header('Allow: POST');
+            $respond(405, [
+                'success' => false,
+                'message' => 'Endpoint chỉ nhận POST.',
+            ]);
+        }
+
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+
+        if (!is_string($token) || $token === ''
+            || !hash_equals(csrf_token(), $token)) {
+            $respond(419, [
+                'success' => false,
+                'message' => 'Phiên làm việc hết hạn. Hãy tải lại trang.',
+            ]);
+        }
+
+        // Giới hạn dữ liệu đầu vào, không đọc body quá lớn.
+        $raw = file_get_contents('php://input', false, null, 0, 8193);
+
+        if ($raw === false || strlen($raw) > 8192) {
+            $respond(413, [
+                'success' => false,
+                'message' => 'Dữ liệu yêu cầu quá lớn.',
+            ]);
+        }
+
+        $data = json_decode($raw, true);
+
+        if (!is_array($data)
+            || !is_string($data['map_size'] ?? null)
+            || !is_string($data['difficulty'] ?? null)
+            || !is_int($data['num_pairs'] ?? null)
+            || !is_string($data['seed'] ?? null)) {
+            $respond(422, [
+                'success' => false,
+                'message' => 'Cấu hình bản đồ không hợp lệ.',
+            ]);
+        }
+
+        // Giải phóng session lock trước khi chạy thuật toán.
+        session_write_close();
+
+        try {
+            $result = \App\Services\PortalMapGeneratorService::generateMap(
+                $data['map_size'],
+                $data['difficulty'],
+                $data['num_pairs'],
+                trim($data['seed'])
+            );
+
+            $map = $result['map'];
+
+            $map['configHash'] = hash('sha256', json_encode(
+                $map,
+                JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+            ));
+
+            // Keep the exact generated board server-side; the form submits only its key.
+            session_start();
+            $_SESSION['portal_generated_maps'][$map['configHash']] = $map;
+            $_SESSION['portal_generated_maps'] = array_slice(
+                $_SESSION['portal_generated_maps'], -5, null, true
+            );
+            session_write_close();
+
+            $respond(200, [
+                'success' => true,
+                'data' => [
+                    'map' => $map,
+                    'verification' => $result['verification'],
+                    'solution' => ['moves' => $result['solution']['moves']],
+                ],
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            $respond(422, [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('Portal map generation failed: ' . $e->getMessage());
+
+            $respond(500, [
+                'success' => false,
+                'message' => 'Không thể sinh bản đồ. Hãy thử lại.',
+            ]);
+        }
+    }
     // 2. Tuyến Admin API (Quản trị viên)
     if (str_starts_with($requestUri, '/api/admin/')) {
         if (preg_match('#^/api/admin/users/(\d+)/pvp-history$#', $requestUri, $m) && $httpMethod === 'GET') {

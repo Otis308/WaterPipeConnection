@@ -1,5 +1,23 @@
 # Trạng thái công việc WaterPipeConnection
 
+## Portal: xem lời giải và thêm vào quản lý màn chơi — 28/10/2026
+
+- Đã nối hai tính năng theo cấp phép mới. `public/index.php` nhánh `/api/admin/portal-map` (admin/session/CSRF) trả thêm `solution.moves` chỉ cho portal; giữ tối đa 5 map gốc theo hash trong session. Map gốc không chứa chuỗi giải. Không sửa generator/game/AI cũ.
+- Thêm `public/JS/TrangGame/PortalMapPreview.js`: clone map, replay xoay xanh/swap vàng kề nhau, pause/resume/reset, BFS kiểm tất cả cặp sau cùng và tô đường nối. Dashboard nạp script, thêm nút; sinh map mới hủy replay cũ. Đây là phát lại lời giải đã biết, không phải AI tự tìm.
+- Nút thêm màn mở modal tạo màn hiện có, điền cấu hình và hash. `GameLevelController::store()` lấy map đáng tin từ session, kiểm admin và cấu hình/thời gian, gọi `PdoDatabaseService::createLevel()` hiện có để lưu nguyên map trong `map_config_json`; thời gian lấy từ form. Lưu thành công trở lại `/admin`. Tạo màn thông thường giữ luồng cũ. Form `/levels/create` giữ hash khi validation lỗi để không mất map khi sửa thông tin. Không thêm bảng/migration.
+- Phát hiện bằng test: rule hiện có implement `Illuminate\Contracts\Validation\ValidationRule` nhưng root stub thiếu interface. Bổ sung đúng chữ ký interface vào `database/stubs.php`, không cài framework/dependency và giữ nguyên rule.
+- Kiểm tra: PHP lint index/controller/stub qua, Node check module và hàm inline qua. `tests/portal_level_save_test.php`: **10 assertion qua**, dùng real SQL writer với SQLite :memory:, reflection bỏ qua constructor production; lưu đủ map, không lưu solution, từ chối hash/độ khó/thời gian/role sai, hồi quy tạo màn thông thường. `php ... --fixture | node tests/portal_map_preview_test.cjs`: mô phỏng DOM chạy module thật, replay/BFS/pause/resume/reset/immutable save/modal cleanup qua. Không chạy dashboard/controller với DB thật, không tạo level thực, chưa kiểm E2E trình duyệt hoặc HTTP phiên admin.
+- Giới hạn: session chỉ giữ 5 map gần nhất, hash hết hạn phải sinh lại. Lưu hiện dùng form tạo màn sẵn có (xuất bản theo hành vi cũ). Chưa nối game để chơi đúng `map_config_json` đã lưu; yêu cầu hiện tại chỉ lưu vào quản lý. Các mục “chưa nối UI/HTTP” bên dưới là lịch sử trước lần cập nhật này.
+
+## Service sinh bản đồ portal độc lập — 28/10/2026
+
+- Thêm `app/Services/PortalMapGeneratorService.php`, `generateMap(size, difficulty, numPairs, seed)`: PHP thuần, không DB/session/cache. Giữ nguyên dashboard/index và generator/AI/game hiện có theo phạm vi người dùng cho phép. Chưa có endpoint hoặc giao diện gọi service mới.
+- DFS quay lui có ngân sách 6.000 lượt/vùng, chuyển thể từ `BanDoGame.js::timDuongUonLuonZicZacDFS()`; chia vùng riêng cho từng cặp, đặt góc đầu/cuối theo đường thực tế. Gọi RNG thuần `PvpMapService::createRng()`, copy/chuyển thể quy tắc hướng/hình dạng và màu. Dễ xanh; trung bình xanh/vàng; khó thêm đỏ và tường ngoài đường dựng. Không thay thuật toán gốc.
+- Dựng bàn đã giải, chỉ xoay xanh và swap token vàng kề nhau; replay thao tác ngược và kiểm cổng trên từng cạnh của đường dựng. `PipeScoringService::solve()` kiểm chứng độc lập với ngân sách mặc định: `unproven` không phủ định chứng cứ replay, `invalid/unsatisfiable` gây lỗi. Không gọi `baseline()` có ghi cache. Kết quả tách `map`, `verification`, `solution` riêng tư; không gửi `solution` cho người chơi.
+- Giới hạn chủ động: mỗi vùng ít nhất 2x2; khó ít nhất 6 ô/vùng. Cấu hình không đủ chỗ bị từ chối. Chưa cam kết độ khó định lượng, chưa trả tối ưu nếu solver hết ngân sách; vùng độc lập hạn chế các đường giao nhau. Cùng cấu hình/seed cho map và witness giống nhau; thời gian solver có thể khác.
+- Đã chạy trong Docker hiện có: PHP lint service qua; `php tests/portal_map_generator_test.php` **1.778 assertion qua**, 60 trường hợp size/difficulty/seed, replay đúng luật, BFS độc lập trên bàn replay, đủ đầu/cuối/màu, deterministic và từ chối input sai. Test require trực tiếp ba service, không bootstrap/PDO/cache; chưa kiểm HTTP/UI/DB. Không rebuild/restart/migration.
+- Tiếp theo: chờ người dùng cấp phép sửa `resources/views/portal/dashboard.blade.php` và `public/index.php` để nối giao diện/API (guard admin, CSRF, validation); chưa lưu map thành level hoặc thay luồng chơi.
+
 ## Chat AJAX trong trận PvP — 28/10/2026
 
 **Đã thêm chat trong từng trận, kiểm tra bằng hai session/browser context riêng trên Apache thật với SQLite fixture.** Avatar đã hoàn tất theo mục bên dưới và được giữ nguyên. Không nâng dependency, refactor game, đổi luật/điểm/Elo hoặc sửa WebSocket.
