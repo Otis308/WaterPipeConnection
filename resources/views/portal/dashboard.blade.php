@@ -754,14 +754,14 @@ async function runSeedGenerator(e) {
 
         const summary = document.createElement('p');
         summary.textContent = verification.solvable
-            ? '✓ Có lời giải — đã kiểm tra bằng thao tác hợp lệ.'
+            ? '✓ Generator xác nhận map có lời giải. Bấm “Xem cách giải” để bộ tìm kiếm tìm độc lập.'
             : 'Chưa xác nhận lời giải.';
         preview.appendChild(summary);
 
         const optimality = document.createElement('p');
         optimality.textContent =
             verification.optimality.status === 'proven'
-                ? 'Bộ giải đã chứng minh được chuẩn tối ưu.'
+                ? 'Đã có chuẩn độ dài đường nước tối ưu; không phải kết quả tìm thao tác của nút xem lời giải.'
                 : 'Chưa chứng minh tối ưu trong giới hạn tìm kiếm.';
         preview.appendChild(optimality);
 

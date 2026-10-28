@@ -1,5 +1,14 @@
 # Trạng thái công việc WaterPipeConnection
 
+## Sửa tìm lời giải portal bị Set maximum size exceeded — 29/10/2026
+
+- Chỉ sửa 3 file chạy `PortalMapBfsWorker.js`, `PortalMapPreview.js`, `dashboard.blade.php` và test BFS có sẵn; không tạo file mới, không sửa index, generator, AI/game gốc, nước hoặc lưu màn.
+- Worker thay BFS toàn trạng thái (queue/Set tăng tới hàng triệu) bằng BFS ngược trên ô/hướng vào làm cận và thứ tự tìm; tìm các đường đơn, quay lui khi các cặp xung đột, OR ràng buộc cổng dùng chung. Matching token vàng theo số lượng/hướng trong mỗi cụm, chuyển cấu hình đích thành xoay xanh và swap vàng kề nhau bằng cố định lá cây khung. Tham khảo/copy quy tắc từ PipeScoringService, không sửa file PHP. Không nhận solution/steps/đường DFS của generator.
+- Bộ tìm kiếm mới **BFS + ràng buộc/quay lui**, dừng ở lời giải khả thi đầu tiên, không cam kết ít thao tác hoặc đường nước ngắn nhất. Bộ nhớ giữ topology, cận ô/hướng và stack đường thay vì toàn trạng thái; thời gian vẫn có thể lớn trên trường hợp khó, không thêm ngân sách mặc định theo yêu cầu người dùng. Nút dừng Worker vẫn hoạt động.
+- Preview thay thông báo đếm trạng thái bằng số bước tìm đường; dashboard phân biệt generator chứng minh có lời giải/chuẩn độ dài với bộ tìm kiếm độc lập của nút xem. Giữ API moves/paths cho replay và BFS kiểm lại trước nước.
+- Đã chạy Node test nhỏ: xanh/vàng/đỏ, nhiều cặp, xung đột cấu hình chung, cross dùng chung, witness giả không ảnh hưởng. Sinh fixture PHP thuần không bootstrap/DB, kiểm **42 map** (6 trường hợp seed/cấu hình lớn + 36 hồi quy easy/medium/hard, 3x8/5x8/5x12, 1–4 cặp), replay từng thao tác và BFS độc lập trên bàn cuối. 5x8 hard/3 cặp SEED_HUIT_2026: 46 bước xét đường; hai cách đọc seed ảnh SEED_4YZZQFVZ/SEED_4YZZQFV2, 5x8 hard/2 cặp: 42/63 bước; 5x12 hard/4 cặp SEED_HUIT_2026: 66 bước. Số đo là Node local, không hứa thời gian trình duyệt giống nhau.
+- Node syntax worker/preview qua, mô phỏng DOM preview và nước hồi quy qua. Chưa thử E2E trình duyệt thật. Không truy cập hoặc sửa DB thật. Mô tả BFS toàn trạng thái bên dưới là lịch sử đã thay thế.
+
 ## Sửa nút khóa/mở khóa tài khoản portal — 29/10/2026
 
 - Nguyên nhân 404: dashboard gọi `route('admin.users.toggle_active', ['id'=>...])` nhưng bảng route helper thiếu key, fallback tạo `/admin/users/toggle_active` không có ID, không khớp dispatcher POST `/admin/users/{id}/toggle-active`. Thêm mapping trong `bootstrap/huit_hybrid_kernel.php::route()`.

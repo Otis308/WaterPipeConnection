@@ -104,14 +104,14 @@
                 const token=++generation;
                 try { worker=new Worker('/JS/TrangGame/PortalMapBfsWorker.js'); }
                 catch(error) { status(error.message); return; }
-                status('BFS đang tự tìm từ bàn ban đầu...'); el('portalReplay').textContent='Dừng tìm BFS';
+                status('Đang tìm đường bằng BFS và kiểm tra ràng buộc ống, không đọc đáp án sinh map...'); el('portalReplay').textContent='Dừng tìm';
                 worker.onerror=()=>{if(token!==generation)return;cancelSearch();status('Worker BFS gặp lỗi hoặc hết bộ nhớ.');el('portalReplay').textContent='Tìm lại bằng BFS';};
                 worker.onmessage=event=>{
                     if(token!==generation)return;
                     const result=event.data;
-                    if(result.type==='progress') {status(`BFS đã xét ${result.visited.toLocaleString()} trạng thái, phát hiện ${result.discovered.toLocaleString()}.`);return;}
+                    if(result.type==='progress') {status(`Đã xét ${result.visited.toLocaleString()} bước tìm đường; đang kiểm tra các cặp và cụm ống vàng.`);return;}
                     cancelSearch();
-                    if(result.type!=='solved') {status(result.message || 'BFS đã duyệt hết: không có lời giải.');el('portalReplay').textContent='Tìm lại bằng BFS';return;}
+                    if(result.type!=='solved') {status(result.message || 'Đã duyệt các phương án đường nối: không có lời giải hợp lệ.');el('portalReplay').textContent='Tìm lại lời giải';return;}
                     moves=result.moves; solved=true;step=0;
                     el('portalReplay').textContent='Tạm dừng';run();
                 };
