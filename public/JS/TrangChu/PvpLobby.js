@@ -21,6 +21,8 @@
     roomPollInterval: null,
     matchmakingTimer: null,
     matchmakingSeconds: 0,
+    matchmakingPoll: null,
+    matchmakingRun: 0,
   };
 
   /**
@@ -670,15 +672,58 @@
 
   // ==================== TÌM TRẬN NGẪU NHIÊN ====================
 
+  async function requestMatchmaking(action, payload) {
+    let res;
+    try {
+      res = await fetch(`/api/pvp/matchmaking/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      throw new Error('Không kết nối được máy chủ. Chưa xác nhận trạng thái tìm trận; hãy thử hủy tìm trận.');
+    }
+    let json;
+    try {
+      if (!(res.headers.get('Content-Type') || '').toLowerCase().includes('application/json')) throw new Error();
+      json = await res.json();
+    } catch (e) {
+      throw new Error(`Máy chủ trả phản hồi không hợp lệ (HTTP ${res.status}). Vui lòng thử lại sau.`);
+    }
+    if (!res.ok || json?.success === false) {
+      throw new Error(typeof json?.message === 'string' ? json.message : `Yêu cầu tìm trận thất bại (HTTP ${res.status}).`);
+    }
+    if (json?.success !== true || (action === 'join' &&
+        (!['waiting', 'matched'].includes(json.data?.status) || (json.data.status === 'matched' && !json.data.room?.room_code)))) {
+      throw new Error(`Dữ liệu tìm trận không hợp lệ (HTTP ${res.status}).`);
+    }
+    return json;
+  }
+
+  function stopMatchmakingTimers() {
+    clearInterval(pvpState.matchmakingTimer);
+    clearInterval(pvpState.matchmakingPoll);
+    pvpState.matchmakingRun++;
+  }
+
+  function showMatchmakingError(error) {
+    stopMatchmakingTimers();
+    document.getElementById('mmPlayerCountText').textContent = error.message;
+    alert(error.message);
+  }
+
   async function startMatchmaking(targetPlayers = 3) {
     const modal = document.getElementById('pvpMatchmakingModal');
-    if (!modal) return;
+    if (!modal || modal.style.display === 'flex') return;
 
+    stopMatchmakingTimers();
+    const run = pvpState.matchmakingRun;
     modal.style.display = 'flex';
     document.getElementById('mmPlayerCountText').textContent = `Đang tìm trận (${targetPlayers} người chơi)...`;
 
     pvpState.matchmakingSeconds = 0;
     const timerEl = document.getElementById('mmTimerText');
+    if (timerEl) timerEl.textContent = '⏱  Thời gian chờ: 00:00';
 
     clearInterval(pvpState.matchmakingTimer);
     pvpState.matchmakingTimer = setInterval(() => {
@@ -688,78 +733,74 @@
       if (timerEl) timerEl.textContent = `⏱  Thời gian chờ: ${m}:${s}`;
     }, 1000);
 
+    let json;
     try {
       const myId = getMyUserId();
-      const res = await fetch('/api/pvp/matchmaking/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: myId,
-          target_players: targetPlayers,
-          preferred_size: getSelectedMapSize(),
-          preferred_diff: getSelectedDifficulty(),
-        }),
+      json = await requestMatchmaking('join', {
+        user_id: myId,
+        target_players: targetPlayers,
+        preferred_size: getSelectedMapSize(),
+        preferred_diff: getSelectedDifficulty(),
       });
-
-      const json = await res.json();
-      if (json.success) {
-        if (json.data && json.data.status === 'matched') {
-          // Đã đủ người ngay lập tức!
-          clearInterval(pvpState.matchmakingTimer);
-          modal.style.display = 'none';
-          openWaitingRoom(json.data.room);
-        } else {
-          document.getElementById('mmPlayerCountText').textContent = `Đã ghép: ${json.data?.matched_count || 1}/${targetPlayers} người chơi`;
-          pollMatchmakingQueue(targetPlayers);
-        }
-      }
     } catch (e) {
-      alert('Lỗi kết nối khi vào hàng đợi tìm trận.');
-      cancelMatchmaking();
+      if (run === pvpState.matchmakingRun) showMatchmakingError(e);
+      return;
+    }
+    if (run !== pvpState.matchmakingRun) return;
+    if (json.data.status === 'matched') {
+      stopMatchmakingTimers();
+      modal.style.display = 'none';
+      openWaitingRoom(json.data.room);
+    } else {
+      document.getElementById('mmPlayerCountText').textContent = `Đã ghép: ${json.data.matched_count || 1}/${targetPlayers} người chơi`;
+      pollMatchmakingQueue(targetPlayers);
     }
   }
 
   function pollMatchmakingQueue(targetPlayers) {
-    const pollIv = setInterval(async () => {
+    const run = pvpState.matchmakingRun;
+    let pending = false;
+    pvpState.matchmakingPoll = setInterval(async () => {
       const modal = document.getElementById('pvpMatchmakingModal');
       if (!modal || modal.style.display === 'none') {
-        clearInterval(pollIv);
+        stopMatchmakingTimers();
         return;
       }
+      if (pending) return;
+      pending = true;
 
+      let json;
       try {
         const myId = getMyUserId();
-        const res = await fetch('/api/pvp/matchmaking/join', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: myId, target_players: targetPlayers }),
-        });
-        const json = await res.json();
-        if (json.success && json.data && json.data.status === 'matched') {
-          clearInterval(pollIv);
-          clearInterval(pvpState.matchmakingTimer);
-          modal.style.display = 'none';
-          openWaitingRoom(json.data.room);
-        } else if (json.data && json.data.matched_count) {
-          document.getElementById('mmPlayerCountText').textContent = `Đã ghép: ${json.data.matched_count}/${targetPlayers} người chơi`;
-        }
-      } catch (e) {}
+        json = await requestMatchmaking('join', { user_id: myId, target_players: targetPlayers });
+      } catch (e) {
+        if (run === pvpState.matchmakingRun) showMatchmakingError(e);
+        return;
+      } finally {
+        pending = false;
+      }
+      if (run !== pvpState.matchmakingRun) return;
+      if (json.data.status === 'matched') {
+        stopMatchmakingTimers();
+        modal.style.display = 'none';
+        openWaitingRoom(json.data.room);
+      } else if (json.data.matched_count) {
+        document.getElementById('mmPlayerCountText').textContent = `Đã ghép: ${json.data.matched_count}/${targetPlayers} người chơi`;
+      }
     }, 1500);
   }
 
   async function cancelMatchmaking() {
-    clearInterval(pvpState.matchmakingTimer);
+    stopMatchmakingTimers();
     const modal = document.getElementById('pvpMatchmakingModal');
-    if (modal) modal.style.display = 'none';
 
     try {
       const myId = getMyUserId();
-      await fetch('/api/pvp/matchmaking/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: myId }),
-      });
-    } catch (e) {}
+      await requestMatchmaking('cancel', { user_id: myId });
+      if (modal) modal.style.display = 'none';
+    } catch (e) {
+      showMatchmakingError(e);
+    }
   }
 
   function escapeHtml(str) {

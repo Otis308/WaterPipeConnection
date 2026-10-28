@@ -271,6 +271,12 @@ class PvpApiController extends Controller
         $size = (string)($payload['preferred_size'] ?? '5x8');
         $diff = (string)($payload['preferred_diff'] ?? 'medium');
 
+        if (!in_array($targetPlayers, [2, 3, 4], true)
+            || !in_array($size, ['3x8', '3x10', '3x12', '5x4', '5x6', '5x8', '5x10', '5x12'], true)
+            || !in_array($diff, ['easy', 'medium', 'hard'], true)) {
+            $this->jsonResponse(false, 'Cấu hình tìm trận không hợp lệ.', null, 422);
+        }
+
         $result = $this->roomService->joinMatchmaking((int)$user['id'], $name, $targetPlayers, $size, $diff);
         $this->jsonResponse($result['success'], $result['message'], $result);
     }

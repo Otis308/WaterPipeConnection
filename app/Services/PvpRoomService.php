@@ -458,21 +458,39 @@ class PvpRoomService
     public function joinMatchmaking(int $userId, string $playerName, int $targetPlayers = 3, string $preferredSize = '5x8', string $preferredDiff = 'medium'): array
     {
         $targetPlayers = max(2, min(4, $targetPlayers)); // 2, 3, hoặc 4 người
-        $this->cleanupStalePlayerRooms($userId);
+        $stmtQueue = $this->conn->prepare('SELECT * FROM pvp_matchmaking_queue WHERE user_id = ?');
+        $stmtQueue->execute([$userId]);
+        $queued = $stmtQueue->fetch(PDO::FETCH_ASSOC);
 
-        // Hủy hàng đợi cũ nếu có
-        $this->cancelMatchmaking($userId);
+        // Polling must return the same match to every member, without re-enqueuing them.
+        if ($queued && $queued['status'] === 'matched') {
+            $room = $this->getRoomDetails($queued['matched_room_code'], $userId);
+            if ($room && $room['is_me_in_room'] && in_array($room['status'], ['waiting', 'ready', 'starting', 'in_progress'], true)) {
+                return ['success' => true, 'status' => 'matched', 'message' => 'Đã ghép trận thành công!',
+                    'room_code' => $room['room_code'], 'room' => $room];
+            }
+        }
 
-        $rating = $this->getUserRating($userId);
-        $now = time();
+        if ($queued && $queued['status'] === 'waiting') {
+            // Keep the original timestamp/preferences when the client polls with only target_players.
+            $targetPlayers = (int)$queued['target_players'];
+            $preferredSize = $queued['preferred_size'];
+            $preferredDiff = $queued['preferred_diff'];
+        } else {
+            $this->cleanupStalePlayerRooms($userId);
+            $this->cancelMatchmaking($userId);
 
-        $stmt = $this->conn->prepare("
-            INSERT INTO pvp_matchmaking_queue (
-                user_id, target_players, player_rating, preferred_size, preferred_diff, 
-                status, queued_at_ts
-            ) VALUES (?, ?, ?, ?, ?, 'waiting', ?)
-        ");
-        $stmt->execute([$userId, $targetPlayers, $rating, $preferredSize, $preferredDiff, $now]);
+            $rating = $this->getUserRating($userId);
+            $now = time();
+
+            $stmt = $this->conn->prepare("
+                INSERT INTO pvp_matchmaking_queue (
+                    user_id, target_players, player_rating, preferred_size, preferred_diff,
+                    status, queued_at_ts
+                ) VALUES (?, ?, ?, ?, ?, 'waiting', ?)
+            ");
+            $stmt->execute([$userId, $targetPlayers, $rating, $preferredSize, $preferredDiff, $now]);
+        }
 
         // Kiểm tra xem đã đủ số người để tự động ghép phòng chưa!
         $matchedRoom = $this->checkAndMatchQueue($targetPlayers, $preferredSize, $preferredDiff);
@@ -483,7 +501,7 @@ class PvpRoomService
                 'status'       => 'matched',
                 'message'      => 'Đã ghép trận thành công!',
                 'room_code'    => $matchedRoom['room_code'],
-                'room'         => $matchedRoom,
+                'room'         => $this->getRoomDetails($matchedRoom['room_code'], $userId),
             ];
         }
 
@@ -558,11 +576,11 @@ class PvpRoomService
             $this->joinRoom((int)$p['user_id'], $pName, $roomCode);
         }
 
-        // Xóa các user này khỏi hàng đợi
+        // Retain the assignment so the other clients can discover it on their next poll.
         $userIds = array_column($candidates, 'user_id');
         $inPlaceholders = implode(',', array_fill(0, count($userIds), '?'));
-        $stmtDel = $this->conn->prepare("DELETE FROM pvp_matchmaking_queue WHERE user_id IN ({$inPlaceholders})");
-        $stmtDel->execute($userIds);
+        $stmtMatched = $this->conn->prepare("UPDATE pvp_matchmaking_queue SET status = 'matched', matched_room_code = ? WHERE user_id IN ({$inPlaceholders})");
+        $stmtMatched->execute(array_merge([$roomCode], $userIds));
 
         return $this->getRoomDetails($roomCode);
     }

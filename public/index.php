@@ -66,6 +66,28 @@ if (str_starts_with($requestUri, '/api/')) {
         (new App\Http\Controllers\Api\PvpChatController())->handle($httpMethod);
         exit;
     }
+    // Include constructor/DDL failures in the matchmaking JSON boundary.
+    if (in_array($requestUri, ['/api/pvp/matchmaking/join', '/api/pvp/matchmaking/cancel'], true) && $httpMethod === 'POST') {
+        ini_set('display_errors', '0');
+        ini_set('log_errors', '1');
+        header('Cache-Control: no-store');
+        try {
+            $pvpApi = new PvpApiController();
+            if ($requestUri === '/api/pvp/matchmaking/join') {
+                $pvpApi->joinMatchmaking();
+            } else {
+                $pvpApi->cancelMatchmaking();
+            }
+        } catch (\Throwable $e) {
+            error_log(sprintf('[PvP matchmaking] %s: %s (code %s) at %s:%d',
+                $requestUri, $e->getMessage(), $e->getCode(), $e->getFile(), $e->getLine()));
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store');
+            echo json_encode(['success' => false, 'message' => 'Máy chủ không thể xử lý tìm trận. Vui lòng thử lại sau.', 'data' => null], JSON_UNESCAPED_UNICODE);
+        }
+        exit;
+    }
     // 1. Tuyến PvP Real-time, Matchmaking & Phòng đấu
     if (str_starts_with($requestUri, '/api/pvp/')) {
         $pvpApi = new PvpApiController();
@@ -82,8 +104,6 @@ if (str_starts_with($requestUri, '/api/')) {
             $requestUri === '/api/pvp/submit-move' && $httpMethod === 'POST' => $pvpApi->submitMove(),
             $requestUri === '/api/pvp/submit-solution' && $httpMethod === 'POST' => $pvpApi->submitSolution(),
             $requestUri === '/api/pvp/reconnect' && $httpMethod === 'GET' => $pvpApi->reconnect(),
-            $requestUri === '/api/pvp/matchmaking/join' && $httpMethod === 'POST' => $pvpApi->joinMatchmaking(),
-            $requestUri === '/api/pvp/matchmaking/cancel' && $httpMethod === 'POST' => $pvpApi->cancelMatchmaking(),
             $requestUri === '/api/pvp/leaderboard' && $httpMethod === 'GET' => $pvpApi->getRankedLeaderboard(),
             $requestUri === '/api/pvp/broadcasting/auth' && $httpMethod === 'POST' => $pvpApi->broadcastingAuth(),
             default => (function () {

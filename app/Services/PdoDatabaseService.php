@@ -48,7 +48,6 @@ class PdoDatabaseService
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             ]);
             $this->driver = 'mysql';
-            $this->ensurePvpSchema();
         } catch (PDOException $e) {
             // Dự phòng thông minh: Nếu người dùng chạy nhanh mà chưa bật MySQL trong Laragon/Docker,
             // tự động khởi tạo CSDL SQLite qua cùng giao diện PDO để ứng dụng luôn chạy mượt 100%!
@@ -61,8 +60,9 @@ class PdoDatabaseService
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             $this->driver = 'sqlite';
             $this->ensureSqliteSchemaAndSeed();
-            $this->ensurePvpSchema();
         }
+        // Schema errors must surface on the selected DB, never silently switch to SQLite.
+        $this->ensurePvpSchema();
     }
 
     public function getConnection(): PDO
@@ -1122,6 +1122,14 @@ class PdoDatabaseService
         }
 
         $isSqlite = $this->driver === 'sqlite';
+
+        if (!$isSqlite) {
+            $sql = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/2026_10_28_pvp_mysql_schema.sql');
+            if ($sql === false) {
+                throw new \RuntimeException('Cannot read PvP MySQL schema');
+            }
+            $this->conn->exec($sql);
+        }
 
         if ($isSqlite) {
             $this->conn->exec("
