@@ -1,0 +1,3 @@
+Thông:
+- đã sửa lại cách tính điểm để khi người chơi hoàn thành so với thuật toán đưa ra số điểm tương ung
+- 

@@ -1,0 +1,20 @@
+{
+    "name": "huit/avatar-storage-runtime",
+    "description": "Isolated Laravel Storage dependencies for player avatars; never install at project root.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "ext-fileinfo": "*",
+        "ext-gd": "*",
+        "illuminate/config": "^12.0",
+        "illuminate/container": "^12.0",
+        "illuminate/filesystem": "^12.0",
+        "league/flysystem": "^3.25.1",
+        "league/flysystem-local": "^3.25.1"
+    },
+    "config": {
+        "allow-plugins": false,
+        "sort-packages": true
+    }
+}
