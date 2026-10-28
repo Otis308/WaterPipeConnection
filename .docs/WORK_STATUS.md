@@ -1,5 +1,26 @@
 # Trạng thái công việc WaterPipeConnection
 
+## Kiểm thử lại sau người dùng thêm bio và khởi động dịch vụ — 29/10/2026
+
+- Metadata MySQL READ ONLY đã xác nhận user_profiles có phone/address/bio. Probe www-data avatar_ready=true; cổng Node 8080 reachable. Không chỉnh schema/dependency hoặc restart trong lần kiểm tra này.
+- Storage smoke qua với user www-data. Avatar HTTP + Storage + SQLite fixture: **58 assertion backend qua**; MySQL temporary check qua; **7 kiểm tra Edge qua** chọn file thật qua CDP/preview/upload/lưu/reload. DOM audit xác nhận input enabled, multipart và trusted click mở chooser. Không sửa avatar của user thật.
+- Matchmaking HTTP thật: đăng ký/đăng nhập hai tài khoản thử độc lập, waiting/cancel/matched/poll cùng phòng và guard 401/422/500 qua; **14 kiểm tra Edge qua**. Hai tài khoản/phòng thử đã dọn. Browser vẫn ghi lỗi CustomModal.init appendChild ở custom-modal.js:71 có sẵn và autoplay headless; không sửa trong nhiệm vụ test.
+- WebSocket thử không gửi message: bắt tay thành công, nhận lời chào 124 ký tự; khi client gửi close, server đóng TCP không trả close frame, client báo 1006/wasClean=false. Đối chiếu websocket-server/server.js nhánh opcode 0x8; chưa sửa. Không suy ra toàn bộ gameplay/start-match/reconnect realtime đã qua vì mới kiểm handshake/greeting/close và matchmaking lobby.
+- Cập nhật này thay trạng thái thiếu bio/Storage/Node trong báo cáo kiểm thử trước. Các 6 test legacy chưa qua vẫn giữ nguyên, không chạy lại vì chưa sửa fixture/contract tương ứng.
+
+## Chuẩn bị lại runtime avatar — 29/10/2026
+
+- Theo yêu cầu người dùng: đã chạy Composer install đúng lockfile, chỉ trong bootstrap/avatar-storage qua container app hiện có, no-dev/no-scripts; 29 install, 0 update/remove. composer.lock và vendor/autoload.php gốc giữ nguyên SHA-256.
+- Chạy script bootstrap/avatar-storage/setup.php sẵn có: tạo thư mục avatars và link public/storage tới ../storage/app/public, không mở DB. Platform requirements qua; probe bằng www-data xác nhận avatar_ready=true, LocalFilesystemAdapter thật và link hợp lệ.
+- Không rebuild/restart, không sửa Dockerfile/php.ini hoặc schema. Người dùng sẽ tự tắt/chạy lại Docker; sau đó mới chạy smoke/upload/browser/MySQL temporary kiểm tra lưu và reload. Chưa xác nhận upload E2E sau lần cài này. Người dùng đã sửa bio trong file SQL; chưa suy ra cột đã tồn tại trên DB đang chạy, chưa import/ALTER.
+
+## Kiểm thử diện rộng — 29/10/2026
+
+- Đã chạy 12 nhóm kiểm thử/kỹ thuật; báo cáo đầy đủ tại [TEST_REPORT_2026-10-29.md](TEST_REPORT_2026-10-29.md). PHP lint 120 file, Node check 25 JS và compile 7 Python qua. Core 23 test chạy trên bản sao SQLite riêng: **17 qua, 6 không qua**, phần lớn fixture/contract luật cũ; không thay test để ép pass.
+- Scoring: 42 thuần +25 integration +21 JS +10 HTTP +7 Edge DOM qua. Khóa/mở/đăng nhập 15, generator 1.778, lưu level 10 assertion qua. Bộ tìm đường qua 42 map; preview/water mô phỏng và 7 cấu trúc dashboard qua. Chat 30 HTTP +20 Edge +8 MySQL tạm qua. Profile 67 HTTP +7 Edge qua.
+- Lỗi runtime xác nhận: MySQL user_profiles có phone/address nhưng thiếu bio; đăng ký thật test HTTP200/PHP fatal Unknown column bio, nên matchmaking test chưa tới bước ghép. Tài khoản thử được dọn. Avatar thiếu autoload riêng và link public/storage; smoke/upload/audit không qua guard runtime. Port 8080 không có listener, chưa E2E realtime.
+- Không sửa code chức năng, dependency hoặc DB schema trong đợt này; giữ nguyên file SQL người dùng đang stage/chỉnh. Test ghi dùng DB/phiên fixture, MySQL tạm hoặc tài khoản thử riêng tự dọn; không sửa tài khoản cũ. PHP host extension_dir sai được override chỉ cho tiến trình test để chạy lại, không sửa php.ini.
+
 ## Ghép tính năng huunghia trên nền Thong — 29/10/2026
 
 - Nhánh thử `integrate-huunghia-on-thong-20261029`, nền Thong `a4b1d1f`; nguồn phục hồi `backup-huunghia-before-thong-20261029` (`bbe9afe`). Chỉ lấy phần sinh map/preview/lưu màn/khóa tài khoản, không merge toàn bộ lịch sử không chung gốc và không ghi đè sửa matchmaking của Thong.

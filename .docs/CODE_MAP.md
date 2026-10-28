@@ -1,5 +1,7 @@
 # Bản đồ mã nguồn WaterPipeConnection
 
+Kiểm tra runtime 29/10/2026: xem [TEST_REPORT_2026-10-29.md](TEST_REPORT_2026-10-29.md) và cập nhật mới nhất WORK_STATUS. MySQL đã có phone/address/bio sau người dùng cập nhật; Storage ready và avatar upload/reload fixture qua 58 backend +7 Edge checks; matchmaking qua HTTP +14 Edge checks. Node 8080 chạy, handshake/greeting qua nhưng close báo1006 (server nhánh opcode0x8 chưa trả close frame). Không coi kết quả lịch sử thiếu dependency/cột là trạng thái hiện tại; chưa xác nhận toàn bộ gameplay WebSocket.
+
 Đối chiếu ngày **28/10/2026**, múi giờ Asia/Saigon. Đây là bản đồ khảo sát có chọn lọc, không phải xác nhận mọi chức năng đều chạy được. Trạng thái môi trường và kết quả chạy nằm trong [WORK_STATUS.md](WORK_STATUS.md).
 
 ## Mục lục
