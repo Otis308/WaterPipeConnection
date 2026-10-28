@@ -1,5 +1,14 @@
 # Trạng thái công việc WaterPipeConnection
 
+## Ghép tính năng huunghia trên nền Thong — 29/10/2026
+
+- Nhánh thử `integrate-huunghia-on-thong-20261029`, nền Thong `a4b1d1f`; nguồn phục hồi `backup-huunghia-before-thong-20261029` (`bbe9afe`). Chỉ lấy phần sinh map/preview/lưu màn/khóa tài khoản, không merge toàn bộ lịch sử không chung gốc và không ghi đè sửa matchmaking của Thong.
+- Khôi phục PortalMapGeneratorService, PortalMapBfsWorker (BFS đường + ràng buộc/quay lui, không Set toàn bàn), PortalMapPreview, PortalMapWater và các test riêng. Dashboard gộp quản lý level với Test Seed, fetch API mới, xem/dừng/đặt lại lời giải và lưu map qua form. API portal-map được chèn riêng, giữ nguyên boundary JSON matchmaking tại index.
+- GameLevelController giữ map gốc theo hash session và lưu map_config_json; form levels/create giữ hash sau validation. Khôi phục stub ValidationRule cần cho rule hiện có, route helper toggle_active và đoạn đóng IIFE bị thiếu trong admin-dashboard.js bản Thong. Chỉ lưu level, chưa đổi luồng chơi level để nạp map đó.
+- Khóa/mở dùng session + PDO, chỉ role user; API authenticatePlayer nay từ chối user is_active=0, mở khóa cho đăng nhập lại. CheckUserActive.php phục hồi như artifact của bạn, nhưng không coi middleware Laravel này tự chạy trong dispatcher hiện tại; không khẳng định đã cưỡng chế khóa trên mọi session/API đang hoạt động.
+- Kiểm tra: 15 assertion khóa/mở/đăng nhập trên SQLite :memory:; 1.778 assertion generator thuần; 10 assertion lưu level SQLite :memory:; 25 assertion hồi quy scoring/PvP SQLite :memory:. Node BFS và nước, mô phỏng DOM preview qua. PHP lint 7 runtime file và render Blade dashboard thật bằng fixture (gộp tab, có nút replay/save) qua; Node check inline JS đã render và các module qua.
+- Đối chiếu Git xác nhận PvpRoomService, PvpApiController, PvpLobby giữ nguyên Thong; ensurePvpSchema/JSON boundary ở index được giữ lại. Không gọi controller/constructor production trong test, không ghi DB thật, không import SQL, không rebuild/restart, chưa E2E browser/tài khoản thật. Không phục hồi tính năng nhật ký/thưởng bị hủy trước đó. Chưa push remote.
+
 ## Sửa matchmaking ngẫu nhiên — 28/10/2026
 
 **Đã sửa và kiểm tra trên Apache/MySQL đang chạy**, gồm hai tài khoản thử đăng nhập bằng API thật và hai Edge context cookie/storage độc lập. Giữ nguyên source tính điểm, profile, avatar, chat và WebSocket; không rebuild/restart/reset/import SQL/đổi dependency. Báo cáo chi tiết, response và log đã loại bỏ bí mật: [PVP_MATCHMAKING_FIX.md](PVP_MATCHMAKING_FIX.md).

@@ -5,6 +5,14 @@
  * trait HasFactory, trait Notifiable, Migration, Blueprint, Request, Auth cho Intelephense.
  */
 
+namespace Illuminate\Contracts\Validation {
+    if (!interface_exists(ValidationRule::class)) {
+        interface ValidationRule {
+            public function validate(string $attribute, mixed $value, \Closure $fail): void;
+        }
+    }
+}
+
 namespace Illuminate\Database {
     if (!class_exists('Illuminate\Database\Seeder', false)) {
         abstract class Seeder {

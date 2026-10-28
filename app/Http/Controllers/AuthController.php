@@ -145,14 +145,14 @@ class AuthController extends Controller
         return redirect('/admin');
     }
 
-    public function toggleActive(int $id)
+    public function toggleActive(int $id, ?\App\Services\PdoDatabaseService $db = null)
     {
         $currentUser = $_SESSION['huit_auth_user'] ?? null;
         if (!$currentUser || ($currentUser['role'] ?? '') !== 'admin') {
             abort(403, 'Chỉ Quản trị viên (Admin) mới có quyền khóa/mở khóa tài khoản.');
         }
 
-        $db = new \App\Services\PdoDatabaseService();
+        $db ??= new \App\Services\PdoDatabaseService();
         $res = $db->toggleUserActive($id);
         if ($res['success']) {
             $_SESSION['flash_success'] = $res['message'];

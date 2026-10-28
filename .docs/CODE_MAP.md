@@ -171,6 +171,10 @@ Kiểm tra trình duyệt chat ngày 28/10 phát hiện lỗi có sẵn: `PvpMat
 <a id="accounts"></a>
 ## 5. Tài khoản, phân quyền và quản trị
 
+Cập nhật tích hợp 29/10/2026: giữ nền matchmaking Thong, phục hồi portal của huunghia. `PortalMapGeneratorService::generateMap()` là generator PHP riêng; API `/api/admin/portal-map` kiểm session admin/CSRF, giữ tối đa 5 map theo hash. `PortalMapPreview` gửi allowlist tới `PortalMapBfsWorker::solvePortalBfs()` (BFS ô/hướng + ràng buộc/quay lui, không nhận đáp án DFS), replay và kiểm BFS trước `PortalMapWater::play()`. Dashboard gộp Test Seed vào tab level; `GameLevelController::store()` lưu map gốc session trong map_config_json. Chưa nối chơi đúng topology level đã lưu. Các module gốc game/PvP không bị thay generator. Xem WORK_STATUS cho kiểm thử và giới hạn.
+
+Khóa tài khoản: `AuthController::toggleActive()` kiểm admin session, gọi `PdoDatabaseService::toggleUserActive()` chỉ sửa role user; `authenticatePlayer()` kiểm is_active trước tạo phản hồi đăng nhập thành công. Helper route có admin.users.toggle_active. Middleware CheckUserActive được phục hồi nhưng chưa là bằng chứng cưỡng chế trên toàn dispatcher. Stub ValidationRule cần cho form tạo level đã bổ sung.
+
 ### Profile riêng — bổ sung 28/10/2026
 
 - [PlayerProfileController.php](../app/Http/Controllers/PlayerProfileController.php) `ownerId()` chỉ lấy `huit_auth_user.id`, redirect khách về `/` trước khi tạo service DB; `show()` trả `Cache-Control: private, no-store`. `update()` kiểm CSRF bằng token session, gọi service, cập nhật tên trong session và redirect 303 với thông báo. Không nhận user ID từ request, không sửa username/email/password. `public/index.php` phân tuyến thật; không dùng routes Laravel khai báo.

@@ -78,22 +78,17 @@
 <ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" role="tab">
-            👥 Quản lý Người chơi
+            Quản lý Người chơi
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="levels-tab" data-bs-toggle="tab" data-bs-target="#tab-levels" type="button" role="tab">
-            🗺️ Quản lý Màn chơi
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="seed-tab" data-bs-toggle="tab" data-bs-target="#tab-seed" type="button" role="tab">
-            🧪 Test Seed
+            Quản lý và Thiết kế màn chơi
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#tab-logs" type="button" role="tab">
-            ⚔️ Nhật ký PvP
+            Nhật ký PvP
         </button>
     </li>
 </ul>
@@ -171,11 +166,11 @@
                                     <small>{{ $winRate }}%</small>
                                 </td>
                                 <td>
-                                    @if($isActive === 1)
-                                        <span class="admin-badge success">Đang hoạt động</span>
-                                    @else
-                                        <span class="admin-badge error">Đã bị khóa</span>
-                                    @endif
+                                        @if($isActive === 1)
+                                            <span class="admin-badge success">Đang hoạt động</span>
+                                        @else
+                                            <span class="admin-badge error">Đã khóa</span>
+                                        @endif
                                 </td>
                                 <td>
                                     <form method="POST" action="/admin/users/{{ $u['id'] }}/role" class="d-inline-flex gap-1 align-items-center">
@@ -187,28 +182,41 @@
                                         <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm">Lưu</button>
                                     </form>
                                 </td>
-                                <td class="text-end">
-                                    <div class="admin-action-menu">
-                                        <button class="admin-kebab-btn">⋮</button>
-                                        <div class="menu-dropdown">
-                                            <a href="#" class="menu-item" data-user-id="{{ $u['id'] }}" data-username="{{ $u['username'] }}" onclick="viewUserPvpHistoryFromMenu(this)">
-                                                <span>📜</span> Lịch sử PvP
-                                            </a>
-                                            <div class="menu-divider"></div>
-                                            <form method="POST" action="/admin/users/{{ $u['id'] }}/toggle-active" class="d-inline">
-                                                @csrf
-                                                @if($isActive === 1)
-                                                    <button type="submit" class="menu-item danger">
-                                                        <span>🔒</span> Khóa tài khoản
-                                                    </button>
-                                                @else
-                                                    <button type="submit" class="menu-item success">
-                                                        <span>🔓</span> Mở khóa
-                                                    </button>
-                                                @endif
-                                            </form>
-                                        </div>
-                                    </div>
+
+                                <td>
+                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                {{-- Nút khóa / mở khóa --}}
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('admin.users.toggle_active', ['id' => $u['id']]) }}"
+                                                    onsubmit="return confirm('{{ $isActive === 1 ? 'Bạn có chắc chắn muốn khóa tài khoản này?' : 'Bạn có chắc chắn muốn mở khóa tài khoản này?' }}');"
+                                                >
+                                                    @csrf
+
+                                                    @if($isActive === 1)
+                                                        <button type="submit" class="admin-btn admin-btn-sm"
+                                                                style="background: #dc3545; color: #fff; border: 1px solid #dc3545;">
+                                                            Khóa
+                                                        </button>
+                                                    @else
+                                                        <button type="submit" class="admin-btn admin-btn-sm"
+                                                                style="background: #198754; color: #fff; border: 1px solid #198754;">
+                                                            Mở
+                                                        </button>
+                                                    @endif
+                                                </form>
+
+                                                {{-- Giữ lại chức năng lịch sử PvP --}}
+                                                <button
+                                                    type="button"
+                                                    class="admin-btn admin-btn-secondary admin-btn-sm"
+                                                    data-user-id="{{ $u['id'] }}"
+                                                    data-username="{{ $u['username'] }}"
+                                                    onclick="viewUserPvpHistoryFromMenu(this)"
+                                                >
+                                                    Lịch sử PvP
+                                                </button>
+                                            </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -339,14 +347,14 @@
                                         <button class="admin-kebab-btn">⋮</button>
                                         <div class="menu-dropdown">
                                             <a href="{{ route('levels.show', $lvl['id']) }}" class="menu-item">
-                                                <span>👁️</span> Chi tiết
+                                                <span></span> Chi tiết
                                             </a>
                                             <a href="{{ route('levels.edit', $lvl['id']) }}" class="menu-item">
-                                                <span>✏️</span> Sửa
+                                                <span></span> Sửa
                                             </a>
                                             <div class="menu-divider"></div>
                                             <button type="button" class="menu-item danger" onclick="confirmDeleteLevel({{ $lvl['id'] }}, '{{ $lvl['title'] }}')">
-                                                <span>🗑️</span> Xóa
+                                                <span></span> Xóa
                                             </button>
                                         </div>
                                     </div>
@@ -356,95 +364,99 @@
                             <tr>
                                 <td colspan="9">
                                     <div class="admin-empty-state">
-                                        <div class="empty-icon">🗺️</div>
+                                        <div class="empty-icon"></div>
                                         <div class="empty-title">Chưa có màn chơi nào</div>
                                         <div class="empty-description">Hãy tạo màn chơi đầu tiên để bắt đầu</div>
                                     </div>
                                 </td>
                             </tr>
                         @endforelse
+                        
                     </tbody>
                 </table>
             </div>
+        
         </div>
-    </div>
-
-    {{-- TAB 3: TEST SEED (giữ nguyên nội dung cũ) --}}
-    <div class="tab-pane fade" id="tab-seed">
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="admin-card">
-                    <h3 class="mb-3">🧪 Cấu hình Test Seed</h3>
-                    <form id="seedTesterForm" onsubmit="runSeedGenerator(event)">
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Seed Bản Đồ</label>
-                            <div class="d-flex gap-2">
-                                <input type="text" id="testSeedInput" class="admin-input" placeholder="SEED_HUIT_2026" required value="SEED_HUIT_2026">
-                                <button type="button" class="admin-btn admin-btn-secondary" onclick="generateRandomSeed()">🎲</button>
+        {{-- TAB 3: TEST SEED (giữ nguyên nội dung cũ) --}}
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="admin-card">
+                        <h3 class="mb-3">Cấu hình Test Seed</h3>
+                        <form id="seedTesterForm" onsubmit="runSeedGenerator(event)">
+                            <div class="admin-form-group">
+                                <label class="admin-form-label">Seed Bản Đồ</label>
+                                <div class="d-flex gap-2">
+                                    <input type="text" id="testSeedInput" class="admin-input" placeholder="SEED_HUIT_2026" required value="SEED_HUIT_2026">
+                                    <button type="button" class="admin-btn admin-btn-secondary" onclick="generateRandomSeed()">🎲</button>
+                                </div>
+                                <small class="text-muted">Cùng Seed = Cùng bản đồ 100%</small>
                             </div>
-                            <small class="text-muted">Cùng Seed = Cùng bản đồ 100%</small>
-                        </div>
 
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Kích thước Ma trận</label>
-                            <select id="testMapSize" class="admin-input">
-                                <option value="3x8" selected>3x8</option>
-                                <option value="5x8">5x8</option>
-                                <option value="5x12">5x12</option>
-                            </select>
-                        </div>
-
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Số Cặp Ống</label>
-                            <select id="testNumPairs" class="admin-input">
-                                <option value="1">1 Cặp</option>
-                                <option value="2" selected>2 Cặp</option>
-                                <option value="3">3 Cặp</option>
-                                <option value="4">4 Cặp</option>
-                            </select>
-                        </div>
-
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Độ khó</label>
-                            <select id="testDifficulty" class="admin-input">
-                                <option value="easy" selected>Dễ</option>
-                                <option value="medium">Vừa</option>
-                                <option value="hard">Khó</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" id="btnRunSeed" class="admin-btn admin-btn-primary w-100">
-                            🚀 Sinh Bản Đồ
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="col-lg-8">
-                <div class="admin-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="mb-0">👁️ Preview Bản Đồ</h3>
-                        <span id="configHashBadge" class="admin-badge secondary">Hash: --</span>
-                    </div>
-                    <div id="seedPreviewContainer" style="background: var(--bg); min-height: 380px; border-radius: var(--border-radius-sm); padding: 20px;">
-                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="min-height: 340px;">
-                            <div class="text-center">
-                                <div style="font-size: 48px; margin-bottom: 16px;">🗺️</div>
-                                <p>Nhấn nút bên trái để sinh bản đồ</p>
+                            <div class="admin-form-group">
+                                <label class="admin-form-label">Kích thước Ma trận</label>
+                                <select id="testMapSize" class="admin-input">
+                                    <option value="3x8" selected>3x8</option>
+                                    <option value="5x8">5x8</option>
+                                    <option value="5x12">5x12</option>
+                                </select>
                             </div>
-                        </div>
+
+                            <div class="admin-form-group">
+                                <label class="admin-form-label">Số Cặp Ống</label>
+                                <select id="testNumPairs" class="admin-input">
+                                    <option value="1">1 Cặp</option>
+                                    <option value="2" selected>2 Cặp</option>
+                                    <option value="3">3 Cặp</option>
+                                    <option value="4">4 Cặp</option>
+                                </select>
+                            </div>
+
+                            <div class="admin-form-group">
+                                <label class="admin-form-label">Độ khó</label>
+                                <select id="testDifficulty" class="admin-input">
+                                    <option value="easy" selected>Dễ</option>
+                                    <option value="medium">Vừa</option>
+                                    <option value="hard">Khó</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" id="btnRunSeed" class="admin-btn admin-btn-primary w-100">
+                                Sinh Bản Đồ
+                            </button>
+                        </form>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
+                <div class="col-lg-8">
+                    <div class="admin-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="mb-0">Preview Bản Đồ</h3>
+                            <span id="configHashBadge" class="admin-badge secondary">Hash: --</span>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap mb-3">
+                            <button type="button" id="portalReplay" class="admin-btn admin-btn-secondary" disabled>Xem cách giải</button>
+                            <button type="button" id="portalReset" class="admin-btn admin-btn-secondary" disabled>Đặt lại</button>
+                            <button type="button" id="portalSave" class="admin-btn admin-btn-primary" disabled>Thêm vào quản lý màn chơi</button>
+                        </div>
+                        <p id="portalReplayStatus" aria-live="polite"></p>
+                        <div id="seedPreviewContainer" style="background: var(--bg); min-height: 380px; border-radius: var(--border-radius-sm); padding: 20px;">
+                            <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="min-height: 340px;">
+                                <div class="text-center">
+                                    <div style="font-size: 48px; margin-bottom: 16px;"></div>
+                                    <p>Nhấn nút bên trái để sinh bản đồ</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
     {{-- TAB 4: NHẬT KÝ PVP --}}
     <div class="tab-pane fade" id="tab-logs">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h3 class="mb-1">⚔️ Nhật ký Thi đấu PvP</h3>
+                    <h3 class="mb-1">Nhật ký Thi đấu PvP</h3>
                     <p class="text-muted small mb-0">Giám sát các phiên thi đấu Player vs Player</p>
                 </div>
                 <span class="admin-badge info">{{ count($recentSessions) }} Phiên</span>
@@ -488,7 +500,7 @@
                             <tr>
                                 <td colspan="8">
                                     <div class="admin-empty-state">
-                                        <div class="empty-icon">⚔️</div>
+                                        <div class="empty-icon"></div>
                                         <div class="empty-title">Chưa có nhật ký</div>
                                         <div class="empty-description">Chưa có trận đấu nào được ghi nhận</div>
                                     </div>
@@ -507,7 +519,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">📜 Lịch sử PvP — <span id="modalUsername"></span></h5>
+                <h5 class="modal-title">Lịch sử PvP — <span id="modalUsername"></span></h5>
                 <button type="button" class="close-btn" data-bs-dismiss="modal">×</button>
             </div>
             <div class="modal-body">
@@ -547,7 +559,9 @@
                 <h5 class="modal-title">+ Tạo Màn Chơi Mới</h5>
                 <button type="button" class="close-btn" data-bs-dismiss="modal">×</button>
             </div>
-            <form method="POST" action="{{ route('levels.store') }}">
+            <form method="POST" id="portalCreateLevelForm" action="{{ route('levels.store') }}">
+                <input type="hidden" name="portal_generated_hash" value="">
+                <p id="portalGeneratedNotice" class="px-3" aria-live="polite"></p>
                 @csrf
                 <div class="modal-body">
                     <div class="row g-3">
@@ -611,7 +625,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="admin-btn admin-btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="admin-btn admin-btn-success">💾 Lưu</button>
+                    <button type="submit" class="admin-btn admin-btn-success">Lưu</button>
                 </div>
             </form>
         </div>
@@ -619,6 +633,8 @@
 </div>
 
 @push('scripts')
+<script src="/JS/TrangGame/PortalMapWater.js"></script>
+<script src="/JS/TrangGame/PortalMapPreview.js"></script>
 <script>
 function viewUserPvpHistory(userId, username) {
     document.getElementById('modalUsername').textContent = username;
@@ -680,13 +696,169 @@ function generateRandomSeed() {
     document.getElementById('testSeedInput').value = seed;
 }
 
-function runSeedGenerator(e) {
+async function runSeedGenerator(e) {
     e.preventDefault();
-    showToast('Đang sinh bản đồ...', 'info');
-    // Add your seed generation logic here
-    setTimeout(() => {
-        showToast('Đã sinh bản đồ thành công!', 'success');
-    }, 1000);
+
+    const button = document.getElementById('btnRunSeed');
+    const preview = document.getElementById('seedPreviewContainer');
+    const badge = document.getElementById('configHashBadge');
+
+    if (button.disabled) return;
+
+    const oldLabel = button.textContent;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    button.disabled = true;
+    window.PortalMapPreview.clear();
+    button.textContent = 'Đang sinh và kiểm tra...';
+    preview.textContent = 'Đang sinh bản đồ và kiểm tra lời giải...';
+    badge.textContent = 'Hash: --';
+
+    try {
+        const response = await fetch('/api/admin/portal-map', {
+            method: 'POST',
+            credentials: 'same-origin',
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN':
+                    document.querySelector('meta[name="csrf-token"]')
+                        ?.content || ''
+            },
+            body: JSON.stringify({
+                seed: document.getElementById('testSeedInput').value.trim(),
+                map_size: document.getElementById('testMapSize').value,
+                num_pairs: Number(
+                    document.getElementById('testNumPairs').value
+                ),
+                difficulty:
+                    document.getElementById('testDifficulty').value
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Sinh bản đồ thất bại.');
+        }
+
+        const { map, verification } = result.data;
+        const [rows, cols] = map.mapSizeKey.split('x').map(Number);
+        const minR = Math.min(...map.cells.map(cell => cell.r));
+        const minC = Math.min(...map.cells.map(cell => cell.c));
+
+        preview.replaceChildren();
+        preview.style.overflowX = 'auto';
+
+        const summary = document.createElement('p');
+        summary.textContent = verification.solvable
+            ? '✓ Generator xác nhận map có lời giải. Bấm “Xem cách giải” để bộ tìm kiếm tìm độc lập.'
+            : 'Chưa xác nhận lời giải.';
+        preview.appendChild(summary);
+
+        const optimality = document.createElement('p');
+        optimality.textContent =
+            verification.optimality.status === 'proven'
+                ? 'Đã có chuẩn độ dài đường nước tối ưu; không phải kết quả tìm thao tác của nút xem lời giải.'
+                : 'Chưa chứng minh tối ưu trong giới hạn tìm kiếm.';
+        preview.appendChild(optimality);
+
+        const counts = verification.counts;
+        const legend = document.createElement('p');
+        legend.textContent =
+            `Xanh: ${counts.green} · Vàng: ${counts.yellow}` +
+            ` · Đỏ: ${counts.red} · Tường: ${counts.wall}` +
+            ' · S: bắt đầu · E: kết thúc';
+        preview.appendChild(legend);
+
+        const grid = document.createElement('div');
+        grid.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(${cols}, 52px);
+            grid-template-rows: repeat(${rows}, 52px);
+            gap: 3px;
+            width: max-content;
+            padding: 8px;
+            background: #111827;
+            border-radius: 8px;
+        `;
+
+        for (const cell of map.cells) {
+            const tile = document.createElement('div');
+            tile.style.cssText = `
+                position: relative;
+                width: 52px;
+                height: 52px;
+                background: #243247;
+                border: 1px solid #475569;
+                box-sizing: border-box;
+            `;
+            tile.style.gridRow = String(cell.r - minR + 1);
+            tile.style.gridColumn = String(cell.c - minC + 1);
+
+            const image = document.createElement('img');
+            image.src = '/Images/svg/Ong/' + cell.file;
+            image.alt = cell.role || cell.shape || 'Tường';
+            image.draggable = false;
+            image.style.cssText = `
+                display: block;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            `;
+            image.style.transform =
+                `rotate(${cell.initialRot || 0}deg)`;
+
+            tile.appendChild(image);
+
+            if (cell.role === 'start' || cell.role === 'end') {
+                const pair = map.pipes.find(
+                    item => item.pairId === cell.pairId
+                );
+
+                tile.style.borderColor = pair?.color?.hex || '#ffffff';
+
+                const label = document.createElement('span');
+                label.textContent =
+                    (cell.role === 'start' ? 'S' : 'E') + cell.pairId;
+                label.style.cssText = `
+                    position: absolute;
+                    top: 1px;
+                    left: 1px;
+                    padding: 1px 3px;
+                    border-radius: 3px;
+                    background: #ffffff;
+                    color: #111827;
+                    font-size: 11px;
+                    font-weight: bold;
+                `;
+                tile.appendChild(label);
+            }
+
+            grid.appendChild(tile);
+        }
+
+        preview.appendChild(grid);
+
+        badge.textContent = 'Hash: ' + map.configHash.slice(0, 12);
+        badge.title = map.configHash;
+        window.PortalMapPreview.load(result.data);
+
+        showToast('Đã sinh bản đồ có lời giải!', 'success');
+    } catch (error) {
+        const message = error.name === 'AbortError'
+            ? 'Yêu cầu quá thời gian. Hãy thử lại.'
+            : error.message;
+
+        preview.textContent = message;
+        showToast(message, 'error');
+    } finally {
+        clearTimeout(timeout);
+        button.disabled = false;
+        button.textContent = oldLabel;
+    }
 }
 </script>
 @endpush

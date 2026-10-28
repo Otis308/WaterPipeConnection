@@ -73,6 +73,22 @@ class GameLevelController extends Controller
         }
 
         $errors = $this->validateLevelInput($_POST, $_FILES);
+        $generatedMap = null;
+        $generatedHash = $_POST['portal_generated_hash'] ?? '';
+        if ($generatedHash !== '') {
+            $generatedMap = is_string($generatedHash)
+                ? ($_SESSION['portal_generated_maps'][$generatedHash] ?? null) : null;
+            if (($currentUser['role'] ?? '') !== 'admin' || !is_array($generatedMap)) {
+                $errors['map_size'] = 'Bản đồ tạm không còn tồn tại. Hãy sinh lại trong portal.';
+            } elseif ($generatedMap['mapSizeKey'] !== ($_POST['map_size'] ?? '')
+                || $generatedMap['difficulty'] !== ($_POST['difficulty'] ?? '')) {
+                $errors['map_size'] = 'Kích thước và độ khó phải khớp bản đồ đã sinh.';
+            }
+            $seconds = filter_var($_POST['time_limit_seconds'] ?? null, FILTER_VALIDATE_INT);
+            if ($seconds === false || $seconds < 30 || $seconds > 600) {
+                $errors['time_limit_seconds'] = 'Thời gian phải từ 30 đến 600 giây.';
+            }
+        }
         if (!empty($errors)) {
             $_SESSION['validation_errors'] = $errors;
             $_SESSION['old_input'] = $_POST;
@@ -93,7 +109,7 @@ class GameLevelController extends Controller
         }
 
         $slug = $this->makeSlug($_POST['title']) . '-' . mt_rand(10, 99);
-        $this->db->createLevel([
+        $levelData = [
             'category_id' => (int)$_POST['category_id'],
             'created_by' => (int)$currentUser['id'],
             'title' => trim($_POST['title']),
@@ -106,10 +122,15 @@ class GameLevelController extends Controller
             'description' => trim($_POST['description']),
             'tag_ids' => $_POST['tag_ids'] ?? [],
             'is_published' => 1,
-        ]);
+        ];
+        if ($generatedMap !== null) {
+            $generatedMap['thinkingTimeMs'] = (int)$_POST['time_limit_seconds'] * 1000;
+            $levelData['map_config_json'] = $generatedMap;
+        }
+        $this->db->createLevel($levelData);
 
         $_SESSION['flash_success'] = 'Tạo màn chơi mới thành công (Đã kiểm tra Form Request & đồng bộ Tags N-N).';
-        return redirect('/levels');
+        return redirect($generatedMap !== null ? '/admin' : '/levels');
     }
 
     /**

@@ -137,6 +137,9 @@ class PdoDatabaseService
             return ['success' => false, 'status' => 401, 'message' => 'Tên đăng nhập/Email hoặc mật khẩu không chính xác.'];
         }
 
+        if (($user['role'] ?? '') === 'user' && (int)($user['is_active'] ?? 1) !== 1) {
+            return ['success' => false, 'status' => 403, 'message' => 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.'];
+        }
         $sessionToken = bin2hex(random_bytes(16));
         return [
             'success'       => true,
@@ -808,15 +811,18 @@ class PdoDatabaseService
 
     public function toggleUserActive(int $userId): array
     {
-        $stmt = $this->conn->prepare("SELECT id, username, is_active FROM users WHERE id = ? LIMIT 1");
+        $stmt = $this->conn->prepare("SELECT id, username, role, is_active FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) {
             return ['success' => false, 'message' => 'Không tìm thấy người chơi #'.$userId];
         }
 
+        if (($user['role'] ?? '') !== 'user') {
+            return ['success' => false, 'message' => 'Chỉ được phép khóa hoặc mở khóa tài khoản người chơi.'];
+        }
         $newStatus = ((int)($user['is_active'] ?? 1) === 1) ? 0 : 1;
-        $up = $this->conn->prepare("UPDATE users SET is_active = ? WHERE id = ?");
+        $up = $this->conn->prepare("UPDATE users SET is_active = ? WHERE id = ? AND role = 'user'");
         $up->execute([$newStatus, $userId]);
 
         return [

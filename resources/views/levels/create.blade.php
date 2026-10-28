@@ -14,6 +14,7 @@
 <x-card title="Thông tin Cấu hình Màn Chơi" subtitle="Hỗ trợ Upload Thumbnail & Gắn Tags N-N">
     <form action="{{ route('levels.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
+        <input type="hidden" name="portal_generated_hash" value="{{ old('portal_generated_hash', '') }}">
 
         <div class="row">
             <div class="col-md-6">
