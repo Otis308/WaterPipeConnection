@@ -77,6 +77,7 @@ if (!function_exists('route')) {
             'register.submit' => '/register',
             'logout' => '/logout',
             'admin.users.role' => '/admin/users/{id}/role',
+            'admin.users.toggle_active' => '/admin/users/{id}/toggle-active',
         ];
         $uri = $map[$name] ?? ('/' . str_replace('.', '/', $name));
         if (!is_array($params)) {

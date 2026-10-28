@@ -1,0 +1,21 @@
+const assert=require('assert/strict');
+const {solvePortalBfs:solve}=require('../public/JS/TrangGame/PortalMapBfsWorker.js');
+const cell=(r,c,file,rot=0,role='')=>({r,c,file,initialRot:rot,role});
+const pair=(id,r,c,er,ec)=>({pairId:id,start:{r,c},end:{r:er,c:ec}});
+const start=(r,c)=>cell(r,c,'OngBatDau.svg',0,'start');
+const end=(r,c)=>cell(r,c,'OngKetThuc.svg',180,'end');
+let map={cells:[start(1,1),cell(1,2,'OngXanh/OngXanh-Thang.svg'),end(1,3)],pipes:[pair(1,1,1,1,3)]};
+let result=solve(map);
+assert.equal(result.type,'solved');assert.equal(result.moves.length,1);assert.equal(result.moves[0].degrees,90);
+assert.deepEqual(result.paths[0].cells,['1-1','1-2','1-3']);
+// Deliberately poison any witness fields: solver must ignore them.
+assert.deepEqual(solve({...map,solution:{moves:[{action:'bad'}]},paths:['wrong']}),result);
+map={cells:[start(1,1),cell(1,2,'OngVang/OngVang-ChuL.svg',270),cell(2,2,'OngVang/OngVang-ChuL.svg',90),end(2,3)],pipes:[pair(1,1,1,2,3)]};
+result=solve(map);assert.equal(result.type,'solved');assert.deepEqual(result.moves,[{action:'swap',a:'1-2',b:'2-2'}]);
+map={cells:[start(1,1),cell(1,2,'OngDo/OngDo-Thang.svg'),end(1,3)],pipes:[pair(1,1,1,1,3)]};
+assert.equal(solve(map).type,'unsatisfiable');
+map={cells:[start(1,1),cell(1,2,'OngXanh/OngXanh-Thang.svg'),end(1,3),start(2,1),cell(2,2,'OngXanh/OngXanh-Thang.svg'),end(2,3)],pipes:[pair(1,1,1,1,3),pair(2,2,1,2,3)]};
+result=solve(map);assert.equal(result.moves.length,2);assert.equal(result.paths.length,2);
+map.cells[1].initialRot=90;map.cells[4].initialRot=90;
+assert.equal(solve(map).moves.length,0);
+console.log('Independent BFS: shortest rotation/swap, fixed red, multiple pairs, solved board and poisoned witness passed.');

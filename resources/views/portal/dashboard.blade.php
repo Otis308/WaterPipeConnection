@@ -633,6 +633,7 @@
 </div>
 
 @push('scripts')
+<script src="/JS/TrangGame/PortalMapWater.js"></script>
 <script src="/JS/TrangGame/PortalMapPreview.js"></script>
 <script>
 function viewUserPvpHistory(userId, username) {

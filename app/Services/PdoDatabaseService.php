@@ -808,15 +808,18 @@ class PdoDatabaseService
 
     public function toggleUserActive(int $userId): array
     {
-        $stmt = $this->conn->prepare("SELECT id, username, is_active FROM users WHERE id = ? LIMIT 1");
+        $stmt = $this->conn->prepare("SELECT id, username, role, is_active FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) {
             return ['success' => false, 'message' => 'Không tìm thấy người chơi #'.$userId];
         }
 
+        if (($user['role'] ?? '') !== 'user') {
+            return ['success' => false, 'message' => 'Chỉ được phép khóa hoặc mở khóa tài khoản người chơi.'];
+        }
         $newStatus = ((int)($user['is_active'] ?? 1) === 1) ? 0 : 1;
-        $up = $this->conn->prepare("UPDATE users SET is_active = ? WHERE id = ?");
+        $up = $this->conn->prepare("UPDATE users SET is_active = ? WHERE id = ? AND role = 'user'");
         $up->execute([$newStatus, $userId]);
 
         return [

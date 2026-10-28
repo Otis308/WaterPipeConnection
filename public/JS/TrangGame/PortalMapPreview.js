@@ -4,9 +4,12 @@
     const clone = value => JSON.parse(JSON.stringify(value));
     const key = cell => `${cell.r}-${cell.c}`;
     let original = null, cells = null, moves = [], timer = null, step = 0;
+    let worker = null, generation = 0, solved = false;
     const el = id => document.getElementById(id);
     const status = text => { el('portalReplayStatus').textContent = text; };
     function stop() { clearTimeout(timer); timer = null; }
+    function cancelSearch() { generation++; worker?.terminate(); worker=null; }
+    const grid = () => el('seedPreviewContainer').lastElementChild;
     function paint(highlight = []) {
         const grid = el('seedPreviewContainer').lastElementChild;
         if (!original || !grid) return;
@@ -21,7 +24,7 @@
         });
     }
     function reset() {
-        stop(); step = 0;
+        stop(); cancelSearch(); window.PortalMapWater.clear(grid()); step = 0;
         if (!original) return;
         cells = Object.fromEntries(original.cells.map(c => [key(c), clone(c)]));
         paint(); el('portalReplay').textContent = 'Xem cách giải';
@@ -34,7 +37,7 @@
         return base.map(d => (d + cell.initialRot / 90) % 4);
     };
     function connected() {
-        const traces = new Set();
+        const traces = [];
         for (const pair of original.pipes) {
             const start = key(pair.start), end = key(pair.end);
             const queue = [start], parent = new Map([[start, null]]);
@@ -49,14 +52,17 @@
                 });
             }
             if (!parent.has(end)) return null;
-            for (let at = end; at !== null; at = parent.get(at)) traces.add(at);
+            const path=[];
+            for (let at = end; at !== null; at = parent.get(at)) path.push(at);
+            traces.push({pairId:pair.pairId,cells:path.reverse()});
         }
-        return [...traces];
+        return traces;
     }
     function tick() {
         timer = null;
         if (step === moves.length) {
-            const trace = connected(); paint(trace || []);
+            const trace = connected(); paint();
+            if (trace) window.PortalMapWater.play(grid(),original,cells,trace);
             status(trace ? `Giải thành công: ${original.numPairs}/${original.numPairs} cặp đã nối (BFS kiểm tra).` : 'Kiểm tra thất bại: chưa nối đủ các cặp.');
             el('portalReplay').textContent = 'Xem lại cách giải'; return;
         }
@@ -80,18 +86,40 @@
     }
     window.PortalMapPreview = {
         clear() {
-            stop(); original = null; moves = []; step = 0;
+            stop(); cancelSearch(); window.PortalMapWater.clear(grid()); original = null; moves = []; step = 0; solved=false;
             ['portalReplay','portalReset','portalSave'].forEach(id => { el(id).disabled = true; });
             status('');
         },
         load(data) {
-            original = clone(data.map); moves = clone(data.solution.moves); reset();
+            original = clone(data.map); moves = []; solved=false; reset();
             ['portalReplay','portalReset','portalSave'].forEach(id => { el(id).disabled = false; });
         }
     };
     document.addEventListener('DOMContentLoaded', () => {
         el('portalReplay').addEventListener('click', () => {
+            if (worker) { cancelSearch(); status('Đã dừng BFS.'); el('portalReplay').textContent='Tìm lời giải bằng BFS'; return; }
             if (timer !== null) { stop(); el('portalReplay').textContent = 'Tiếp tục'; return; }
+            if (!solved) {
+                reset();
+                const token=++generation;
+                try { worker=new Worker('/JS/TrangGame/PortalMapBfsWorker.js'); }
+                catch(error) { status(error.message); return; }
+                status('BFS đang tự tìm từ bàn ban đầu...'); el('portalReplay').textContent='Dừng tìm BFS';
+                worker.onerror=()=>{if(token!==generation)return;cancelSearch();status('Worker BFS gặp lỗi hoặc hết bộ nhớ.');el('portalReplay').textContent='Tìm lại bằng BFS';};
+                worker.onmessage=event=>{
+                    if(token!==generation)return;
+                    const result=event.data;
+                    if(result.type==='progress') {status(`BFS đã xét ${result.visited.toLocaleString()} trạng thái, phát hiện ${result.discovered.toLocaleString()}.`);return;}
+                    cancelSearch();
+                    if(result.type!=='solved') {status(result.message || 'BFS đã duyệt hết: không có lời giải.');el('portalReplay').textContent='Tìm lại bằng BFS';return;}
+                    moves=result.moves; solved=true;step=0;
+                    el('portalReplay').textContent='Tạm dừng';run();
+                };
+                // Explicit allowlist: never send generator paths, steps or witness.
+                worker.postMessage({cells:original.cells.map(c=>({r:c.r,c:c.c,file:c.file,initialRot:c.initialRot,role:c.role})),
+                    pipes:original.pipes.map(p=>({pairId:p.pairId,start:{r:p.start.r,c:p.start.c},end:{r:p.end.r,c:p.end.c}}))});
+                return;
+            }
             if (step === moves.length) reset();
             el('portalReplay').textContent = 'Tạm dừng'; run();
         });
@@ -113,6 +141,6 @@
             el('portalCreateLevelForm').elements.portal_generated_hash.value = '';
             el('portalGeneratedNotice').textContent = '';
         });
-        window.addEventListener('pagehide', stop);
+        window.addEventListener('pagehide', () => {stop();cancelSearch();window.PortalMapWater.stop();});
     });
 })();

@@ -1,5 +1,21 @@
 # Trạng thái công việc WaterPipeConnection
 
+## Sửa nút khóa/mở khóa tài khoản portal — 29/10/2026
+
+- Nguyên nhân 404: dashboard gọi `route('admin.users.toggle_active', ['id'=>...])` nhưng bảng route helper thiếu key, fallback tạo `/admin/users/toggle_active` không có ID, không khớp dispatcher POST `/admin/users/{id}/toggle-active`. Thêm mapping trong `bootstrap/huit_hybrid_kernel.php::route()`.
+- Lỗi kế tiếp được đối chiếu tĩnh: `AuthController::toggleActive()` gọi `Auth::user()`/`User::find()` stub. Đổi action này sang session `huit_auth_user` kiểm admin, gọi `PdoDatabaseService::toggleUserActive()` và đặt flash trước redirect. Thêm đối số PDO service tùy chọn để kiểm thử cô lập; luồng HTTP vẫn chỉ truyền id.
+- Giữ quy tắc chỉ khóa/mở khóa role user bằng kiểm tra trực tiếp trong `toggleUserActive()`, UPDATE thêm điều kiện role=user. Không sửa luồng đăng nhập/middleware hoặc khẳng định khóa đã được cưỡng chế trên mọi API.
+- PHP lint ba file sửa qua. `tests/account_toggle_test.php`: **13 assertion qua**, SQLite :memory: và reflection bỏ qua constructor production: admin khóa/mở khóa, flash/redirect, từ chối guest/user/staff, bảo vệ admin/staff/missing user, helper route thật trả URL có ID. Không thay đổi tài khoản thật, chưa E2E HTTP/trình duyệt.
+
+## Portal: BFS tự giải và hiệu ứng nước — 29/10/2026
+
+- Thay replay đáp án generator bằng `public/JS/TrangGame/PortalMapBfsWorker.js::solvePortalBfs()`: BFS trạng thái bàn, cạnh là xoay xanh 90° hoặc swap vàng kề nhau. Mỗi trạng thái kiểm cổng hai chiều bằng BFS ô cho tất cả cặp. Gộp trạng thái theo port mask (các góc/hình token cùng mask tương đương kết nối), visited và parent lưu chuỗi thao tác ngắn nhất. Không đặt ngân sách thời gian/số trạng thái theo yêu cầu người dùng; bộ nhớ trình duyệt vẫn hữu hạn.
+- Worker nhận allowlist cells r/c/file/initialRot/role và pipes pairId/start/end, không nhận seed, steps, correctRot, đường DFS hoặc solution.moves. API `/api/admin/portal-map` đã bỏ trả solution. Generator DFS/PHP và luồng lưu màn giữ nguyên.
+- `PortalMapPreview.js`: tìm/dừng BFS, progress, hủy worker khi reset/map mới/pagehide, chặn callback cũ, replay kết quả Worker và kiểm BFS độc lập trước hiệu ứng. Có pause/resume replay; cache lời giải BFS trong preview để xem lại. Không fallback về đáp án generator.
+- Thêm `PortalMapWater.js`: copy ba template SVG từ SVGnuoc.js vào scope riêng; chuyển thể cơ chế bật rect theo thời gian của BanDoGame, overlay xoay theo ống và tô màu từng cặp, chạy tuần tự đầu→cuối trên đường kiểm được. Có hủy timer/xóa layer khi reset/map mới. Dashboard chỉ thêm script nước trước preview; không sửa code game/SVGnuoc gốc.
+- Kiểm tra đã qua: PHP lint index; Node syntax worker/preview/water; `node tests/portal_bfs_test.cjs` (xoay/swap tối thiểu, đỏ vô nghiệm, multi-pair, bàn đã giải, witness giả không ảnh hưởng); fixture PHP thuần → `tests/portal_map_preview_test.cjs` (mô phỏng Worker/progress/replay/BFS/pause/reset/lưu map gốc/hủy kết quả cũ); `node tests/portal_water_test.cjs` (SVG rect thẳng/L, màu, lịch chạy và hủy). Không truy cập DB thật; chưa E2E trình duyệt hoặc xác nhận BFS hoàn tất trên map 3x8/5x12. DOM simulation không xác nhận thẩm mỹ/vị trí pixel của nước trong trình duyệt. BFS trạng thái lớn có thể hết bộ nhớ; nút Dừng tìm kết thúc Worker.
+- Mô tả replay đáp án generator bên dưới là lịch sử, đã được thay bằng BFS độc lập ở cập nhật này.
+
 ## Portal: xem lời giải và thêm vào quản lý màn chơi — 28/10/2026
 
 - Đã nối hai tính năng theo cấp phép mới. `public/index.php` nhánh `/api/admin/portal-map` (admin/session/CSRF) trả thêm `solution.moves` chỉ cho portal; giữ tối đa 5 map gốc theo hash trong session. Map gốc không chứa chuỗi giải. Không sửa generator/game/AI cũ.

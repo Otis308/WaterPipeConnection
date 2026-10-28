@@ -157,48 +157,16 @@ class AuthController extends Controller
         return redirect('/admin');
     }
 
-    public function toggleActive(int $id)
+    public function toggleActive(int $id, ?\App\Services\PdoDatabaseService $db = null)
     {
-            //Đăng nhập bằng Laravel Auth
-            $currentUser = Auth::user();
+        $currentUser = $_SESSION['huit_auth_user'] ?? null;
+        if (!is_array($currentUser) || ($currentUser['role'] ?? '') !== 'admin') {
+            abort(403, 'Ch? Admin m?i c? quy?n kh?a/m? kh?a t?i kho?n.');
+        }
 
-            //Chỉ Admin mới được thao tác
-            if (!$currentUser || $currentUser->role !== 'admin') {
-                abort(403, 'Chỉ Admin mới có quyền khóa/mở khóa tài khoản.');
-            }
-
-            //Tìm tài khoản cần thao tác
-            $targetUser = User::find($id);
-
-            if (!$targetUser) {
-                return redirect('/admin')->with(
-                    'flash_error',
-                    'Không tìm thấy tài khoản cần thao tác.'
-                );
-            }
-
-            //Chỉ cho phép khóa,mở khóa người chơi
-            if ($targetUser->role !== 'user') {
-                return redirect('/admin')->with(
-                    'flash_error',
-                    'Chỉ được phép khóa hoặc mở khóa tài khoản người chơi.'
-                );
-            }
-
-            $db = new \App\Services\PdoDatabaseService();
-            $res = $db->toggleUserActive($id);
-
-            //Thông báo kết quả
-            if ($res['success']) {
-                return redirect('/admin')->with(
-                    'flash_success',
-                    $res['message']
-                );
-            }
-
-            return redirect('/admin')->with(
-                'flash_error',
-                $res['message']
-            );
+        $db ??= new \App\Services\PdoDatabaseService();
+        $result = $db->toggleUserActive($id);
+        $_SESSION[$result['success'] ? 'flash_success' : 'flash_error'] = $result['message'];
+        return redirect('/admin');
     }
 }

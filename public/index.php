@@ -186,7 +186,6 @@ if (str_starts_with($requestUri, '/api/')) {
                 'data' => [
                     'map' => $map,
                     'verification' => $result['verification'],
-                    'solution' => ['moves' => $result['solution']['moves']],
                 ],
             ]);
         } catch (\InvalidArgumentException $e) {
