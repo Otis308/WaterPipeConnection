@@ -313,6 +313,8 @@ class PvpApiController extends Controller
             $this->jsonResponse(false, 'Thiếu mã phòng.', null, 422);
         }
 
+        $this->matchService->finalizeIfExpired($roomCode);
+
         $stmt = $this->db->getConnection()->prepare("SELECT * FROM pvp_rooms WHERE room_code = ? LIMIT 1");
         $stmt->execute([$roomCode]);
         $room = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -330,12 +332,14 @@ class PvpApiController extends Controller
         ");
         $stmtPlayers->execute([$room['id']]);
         $players = $stmtPlayers->fetchAll(\PDO::FETCH_ASSOC);
+        usort($players, [\App\Services\PipeScoringService::class, 'comparePlayers']);
 
         $leaderboard = array_map(function ($p, $idx) {
             return [
                 'user_id'         => (int)$p['user_id'],
                 'player_name'     => $p['player_name'] ?: $p['username'],
                 'score'           => (int)$p['current_score'],
+                'quality_score' => json_decode($p['board_rotations_json'] ?? '{}', true)['scoring']['quality_score'] ?? null,
                 'pairs_connected' => (int)$p['completed_pairs'],
                 'total_pairs'     => (int)$p['total_pairs'],
                 'status'          => $p['solve_status'],
@@ -361,6 +365,8 @@ class PvpApiController extends Controller
             $this->jsonResponse(false, 'Thiếu mã phòng.', null, 422);
         }
 
+        $this->matchService->finalizeIfExpired($roomCode);
+
         $stmt = $this->db->getConnection()->prepare("SELECT * FROM pvp_rooms WHERE room_code = ? LIMIT 1");
         $stmt->execute([$roomCode]);
         $room = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -385,6 +391,7 @@ class PvpApiController extends Controller
                 'user_id'       => (int)$p['user_id'],
                 'player_name'   => $p['player_name'] ?: $p['username'],
                 'score'         => (int)$p['current_score'],
+                'quality_score' => json_decode($p['board_rotations_json'] ?? '{}', true)['scoring']['quality_score'] ?? null,
                 'finish_time'   => $p['finish_time_ms'] ? round($p['finish_time_ms'] / 1000, 1) : null,
                 'rank'          => (int)$p['final_rank'],
                 'rating_change' => (int)$p['rating_change'],

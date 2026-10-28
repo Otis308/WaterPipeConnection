@@ -289,10 +289,14 @@ dauHang_NutThoat.addEventListener("click", dongDauHang);
 
 // Hàm xử lý chung khi thua
 function xuLyThuaGame() {
+  if (sessionStorage.getItem("gameMode") === "pvp") {
+    window.PvpMatch?.onTimeout();
+    return;
+  }
   window.isGameOver = true;
   capNhatThongKeUser("thua");
   console.log("Game Over!");
-  let diemHienTai = parseInt(localStorage.getItem("tongDiem") || "0");
+  const diemHienTai = window.danhGiaDiem?.quality_score ?? "—";
   let diemCaoNhat = 0;
   const userHienTai = localStorage.getItem("userHienTai");
 
@@ -487,6 +491,12 @@ function capNhatGiaoDienDiem(diem, diemCaoNhat) {
   const divKetThucSao = document.querySelector(".KetThuc-Sao");
   const divKetThucCupSao = document.querySelector(".KetThuc-CupSao");
 
+  if (window.danhGiaDiem) {
+    if (divOngSao) divOngSao.title = "Điểm chất lượng bàn (0–100)";
+    if (divKetThucSao) divKetThucSao.title = "Điểm chất lượng bàn (0–100)";
+    if (divKetThucCupSao) divKetThucCupSao.title = "Kỷ lục điểm thưởng tích lũy";
+  }
+
   // Cập nhật số sao hiện tại
   const htmlSao = `<img src="Images/Sao.svg" /> ${diem}`;
   if (divOngSao) divOngSao.innerHTML = htmlSao;
@@ -679,13 +689,14 @@ function capNhatThongKeUser(ketQua) {
 window.guiKetQuaManChoiLenServer = function (ketQua) {
   const userHienTai = localStorage.getItem("userHienTai") || "";
   const gameMode = sessionStorage.getItem("gameMode") || "player";
+  if (gameMode === "pvp") return;
   const mapOption = sessionStorage.getItem("mapOption") || "random";
   const mapSize = sessionStorage.getItem("mapSize") || "3x8";
   const difficulty = sessionStorage.getItem("difficulty") || "easy";
   const tongDiem = parseInt(localStorage.getItem("tongDiem") || "0", 10);
 
-  let connectedPipes = 0;
-  if (typeof tinhTongSoOngKetNoi === "function") {
+  let connectedPipes = (window.danhSachDuongOng || []).filter(p => p.isConnected).length;
+  if (!window.danhSachDuongOng && typeof tinhTongSoOngKetNoi === "function") {
     connectedPipes = tinhTongSoOngKetNoi();
   }
 
@@ -702,13 +713,20 @@ window.guiKetQuaManChoiLenServer = function (ketQua) {
     map_size: mapSize,
     difficulty: difficulty,
     result: ketQua === "thang" ? "win" : "lose",
-    score_earned: ketQua === "thang" ? (difficulty === "hard" ? 300 : difficulty === "medium" ? 200 : 100) : 0,
+    score_earned: window.danhGiaDiem?.quality_score ?? 0,
+    scoring_version: "joint-paths-v1",
+    quality_score: window.danhGiaDiem?.quality_score ?? null,
     total_score: tongDiem,
     connected_pipes: connectedPipes,
     steps_count: stepsCount,
     ai_retries: aiRetries,
     duration_ms: durationMs,
     telemetry_nosql: {
+      scoring_version: "joint-paths-v1",
+      quality_score: window.danhGiaDiem?.quality_score ?? null,
+      score_status: window.danhGiaDiem?.score_status || "unavailable",
+      is_optimal: window.danhGiaDiem?.is_optimal === true,
+      reward_points: ketQua === "thang" ? 100 : 0,
       aiStatus: typeof aiStats !== "undefined" ? aiStats.status : "player_mode",
       surrenderMode: Boolean(window.dangChayCheDoDauHang),
       timestamp: new Date().toISOString()

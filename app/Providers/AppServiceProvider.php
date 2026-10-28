@@ -22,8 +22,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Khai báo Gate bằng closure ngắn gọn (Slide 24 Bài 9)
-        Gate::define('admin', fn(User $user) => $user->role === 'admin');
-        Gate::define('staff-or-admin', fn(User $user) => in_array($user->role, ['admin', 'staff'], true));
+        Gate::define('admin', fn(User $user) => $user->{'role'} === 'admin');
+        Gate::define('staff-or-admin', fn(User $user) => in_array($user->{'role'}, ['admin', 'staff'], true));
 
         // Đăng ký Policy cho GameLevel
         Gate::policy(GameLevel::class, GameLevelPolicy::class);

@@ -21,6 +21,10 @@
     return;
   }
 
+  window.pvpRestoring = true;
+  let actionQueue = null;
+  let submitButton = null;
+
   // State quản lý trận đấu PvP
   const matchState = {
     roomCode: sessionStorage.getItem('pvpRoomCode') || '',
@@ -58,7 +62,7 @@
   /**
    * Khởi tạo hệ thống thi đấu PvP khi trang tải xong
    */
-  function initPvpMatch() {
+  async function initPvpMatch() {
     // 1. Xác định User ID hiện tại
     const user = window.HUIT_AUTH_USER || null;
     const storedUid = sessionStorage.getItem('huit_user_id');
@@ -79,8 +83,43 @@
     // 6. Kết nối WebSocket và subscribe các kênh
     khoiTaoWebSocketPvP();
 
-    // 7. Bắt đầu đếm ngược thời gian thi đấu
-    batDauDongHoPvP();
+    submitButton = document.createElement('button');
+    submitButton.id = 'pvpSubmitSolution';
+    submitButton.textContent = 'Nộp bài và chốt kết quả';
+    submitButton.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:80;padding:10px 18px;border-radius:8px;background:#22c55e;font-weight:bold;';
+    submitButton.disabled = true;
+    submitButton.addEventListener('click', () => guiLoiGiaiVeServer({}));
+    document.body.appendChild(submitButton);
+    try {
+      const response = await fetch(`/api/pvp/reconnect?room_code=${encodeURIComponent(matchState.roomCode)}&user_id=${matchState.myUserId}`);
+      const json = await response.json();
+      if (!response.ok || !json.success || !json.data?.player_snapshot) throw new Error(json.message || 'Không khôi phục được bàn.');
+      const snapshot = json.data.player_snapshot;
+      matchState.isCompleted = snapshot.solve_status === 'completed';
+      matchState.matchDurationSeconds = snapshot.time_limit_seconds;
+      matchState.startTime = snapshot.started_at_ts * 1000;
+      matchState.elapsedSeconds = Math.max(0, Math.floor((Date.now() - matchState.startTime) / 1000));
+      window.danhGiaServer = snapshot.board_state.scoring;
+      actionQueue = new window.PvpActionQueue(async (endpoint, payload) => {
+        const res = await fetch('/api/pvp/' + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, user_id: matchState.myUserId, room_code: matchState.roomCode }) });
+        const reply = await res.json();
+        const data = reply.data || {};
+        return { ...data, success: res.ok && reply.success, message: reply.message };
+      }, (data) => {
+        if (data.evaluation) window.danhGiaServer = data.evaluation;
+        if (typeof capNhatLuongNuoc === 'function') capNhatLuongNuoc();
+      }, snapshot.board_state_version);
+      window.khoiPhucBanPvP?.(snapshot.board_state);
+      window.isGameOver = matchState.isCompleted;
+      window.pvpRestoring = false;
+      if (!matchState.isCompleted && snapshot.room_status === 'in_progress') await actionQueue.push({});
+      batDauDongHoPvP();
+      if (matchState.elapsedSeconds >= matchState.matchDurationSeconds) xuLyHetGioThiDau();
+    } catch (error) {
+      window.pvpSyncFailed = true;
+      hienThongBaoNhanh(error.message + ' Hãy tải lại trang để đồng bộ.', '#ef4444');
+    }
 
     // 8. TẢI NGAY dữ liệu người chơi từ server không chờ đợi
     taiBangDiemMoiNhat();
@@ -138,6 +177,7 @@
         rating: p.rating || 1000,
         tier: p.tier || { name: 'Bạc', badge: '🥈' },
         score: p.current_score || 0,
+        quality_score: p.quality_score ?? null,
         pairs_connected: p.completed_pairs || 0,
         total_pairs: p.total_pairs || (matchState.matchData.map_data?.numPairs || 2),
         status: p.solve_status || 'playing',
@@ -277,7 +317,7 @@
       const isMe = (p.user_id === matchState.myUserId);
       const badge = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
       const name = isMe ? 'Bạn' : escapeHtml(p.player_name.slice(0, 8));
-      return `<span style="${isMe ? 'color:#38bdf8; font-weight:800;' : ''}">${badge} ${name}: ${p.score || 0}đ</span>`;
+      return `<span style="${isMe ? 'color:#38bdf8; font-weight:800;' : ''}">${badge} ${name}: ${p.quality_score === null ? '—' : (p.score ?? p.current_score ?? 0)}đ</span>`;
     });
 
     miniBar.innerHTML = items.join(' | ');
@@ -287,6 +327,9 @@
    * Render danh sách người chơi lên bảng Live Leaderboard
    */
   function renderInMatchLeaderboard(players) {
+    players = players.map(p => ({ ...p, score: p.score ?? p.current_score ?? 0,
+      status: p.status || p.solve_status || 'playing', pairs_connected: p.pairs_connected ?? p.completed_pairs ?? 0,
+      finish_time: p.finish_time ?? (p.finish_time_ms == null ? null : p.finish_time_ms / 1000) }));
     const container = document.getElementById('pvpPlayersList');
     if (!container) return;
 
@@ -294,7 +337,7 @@
 
     players.forEach((p, idx) => {
       const isMe = (p.user_id === matchState.myUserId);
-      const isDone = (p.status === 'completed' || p.score >= 100);
+      const isDone = (p.status === 'completed' || p.solve_status === 'completed');
       const isDisconn = (p.status === 'disconnected');
 
       const rankBadge = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
@@ -321,7 +364,7 @@
           </div>
           <div style="text-align:right;">
             <div style="font-size:15px; font-weight:900; color:${p.score >= 100 ? '#00e676' : '#fde047'};">
-              ${p.score || 0}đ
+              ${p.quality_score === null ? '—' : (p.score ?? p.current_score ?? 0)}đ
             </div>
             <div style="font-size:10px; color:#94a3b8;">${p.tier?.badge || '👤'} ${p.rating || 1000}</div>
           </div>
@@ -436,8 +479,8 @@
   function thongBaoNguoiChoiXong(data) {
     const isMe = (data.user_id === matchState.myUserId);
     const msg = isMe
-      ? `🎉 Bạn đã hoàn thành bản đồ trong ${data.finish_time}s! Đang chờ kết quả chung cuộc...`
-      : `⚡ ${escapeHtml(data.player_name || 'Đối thủ')} đã hoàn thành trong ${data.finish_time}s!`;
+      ? `🎉 Bạn đã hoàn thành bản đồ trong ${((data.finish_time_ms || 0) / 1000).toFixed(1)}s! Đang chờ kết quả chung cuộc...`
+      : `⚡ ${escapeHtml(data.player_name || 'Đối thủ')} đã hoàn thành trong ${((data.finish_time_ms || 0) / 1000).toFixed(1)}s!`;
 
     hienThongBaoNhanh(msg, isMe ? '#22c55e' : '#f59e0b');
   }
@@ -453,17 +496,10 @@
         return (b.score || 0) - (a.score || 0);
       }
 
-      // 3. Số cặp nối xong nhiều hơn xếp trên
-      if ((b.pairs_connected || 0) !== (a.pairs_connected || 0)) {
-        return (b.pairs_connected || 0) - (a.pairs_connected || 0);
+      if (a.status === 'completed' && b.status === 'completed' && a.finish_time !== b.finish_time) {
+        return (a.finish_time ?? Infinity) - (b.finish_time ?? Infinity);
       }
-
-      // 4. Thời gian hoàn thành nhanh hơn xếp trên
-      if (a.finish_time && b.finish_time) {
-        return a.finish_time - b.finish_time;
-      }
-
-      return 0;
+      return Number(a.user_id) - Number(b.user_id);
     });
 
     matchState.leaderboard.forEach((p, idx) => { p.rank = idx + 1; });
@@ -510,17 +546,12 @@
     if (matchState.isCompleted || matchState.isMatchEnded) return;
     console.log('[PvP Match] Hết giờ thi đấu! Gửi điểm hiện tại...');
 
-    const currentScore = window.diemHienTai100 || 0;
-    const connectedCount = (window.danhSachDuongOng || []).filter(p => p.isConnected).length;
-    const totalPairs = (window.danhSachDuongOng || []).length || 2;
-
-    guiLoiGiaiVeServer({
-      score: currentScore,
-      duration: matchState.matchDurationSeconds,
-      pairs_connected: connectedCount,
-      total_pairs: totalPairs,
-      is_timeout: true,
-    });
+    window.isGameOver = true;
+    window.pvpSubmitting = true;
+    // Drain accepted local actions before requesting the deadline snapshot. The
+    // server rejects late moves and finalizes from its own clock and board.
+    const drained = actionQueue ? actionQueue.tail : Promise.resolve();
+    drained.catch(() => {}).then(() => taiBangDiemMoiNhat());
   }
 
   /**
@@ -555,62 +586,21 @@
     } catch (e) {}
   }
 
-  /**
-   * Gửi báo cáo tiến trình (Throttle mỗi 600ms)
-   */
-  function baoCaoTienTrinhLenServer(progress) {
-    const now = Date.now();
-    if (now - matchState.lastSubmitTime < 600) return;
-    matchState.lastSubmitTime = now;
-
-    fetch('/api/pvp/submit-move', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: matchState.myUserId,
-        room_code: matchState.roomCode,
-        current_score: progress.currentScore || 0,
-        tentative_score: progress.currentScore || 0,
-        pairs_connected: progress.connectedPairs || 0,
-        completed_pairs: progress.connectedPairs || 0,
-        total_pairs: progress.totalPairs || 2,
-        total_flow_cells: progress.totalFlowCells || 0,
-      }),
-    }).catch(() => {});
-  }
-
-  /**
-   * Gửi lời giải chính thức lên Backend để xác minh và tính điểm chuẩn
-   */
-  async function guiLoiGiaiVeServer(result) {
-    if (matchState.isCompleted) return;
-    matchState.isCompleted = true;
-
+  async function guiLoiGiaiVeServer() {
+    if (!actionQueue || matchState.isCompleted || matchState.isMatchEnded || window.pvpSubmitting) return;
+    window.pvpSubmitting = true;
+    if (submitButton) submitButton.disabled = true;
     try {
-      const res = await fetch('/api/pvp/submit-solution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: matchState.myUserId,
-          room_code: matchState.roomCode,
-          score: result.score,
-          duration: result.duration,
-          pairs_connected: result.pairs_connected,
-          total_pairs: result.total_pairs,
-          total_flow_cells: result.total_flow_cells || 0,
-        }),
-      });
-
-      const json = await res.json();
-      console.log('[PvP Match] Phản hồi submit-solution:', json);
-
-      if (json.success && json.match_completed && json.results) {
-        hienThiModalKetQua(json);
-      } else {
-        taiBangDiemMoiNhat();
-      }
-    } catch (e) {
-      console.error('[PvP Match] Lỗi gửi submit-solution:', e);
+      const result = await actionQueue.submit();
+      matchState.isCompleted = result.is_completed === true;
+      window.isGameOver = matchState.isCompleted;
+      if (matchState.isCompleted) hienThongBaoNhanh('Đã nộp bài. Đang chờ kết quả trận đấu.', '#22c55e');
+      await taiBangDiemMoiNhat();
+    } catch (error) {
+      hienThongBaoNhanh(error.message, '#ef4444');
+    } finally {
+      window.pvpSubmitting = false;
+      if (typeof capNhatLuongNuoc === 'function') capNhatLuongNuoc();
     }
   }
 
@@ -619,6 +609,8 @@
    */
   async function ketThucTranDau(data) {
     matchState.isMatchEnded = true;
+    window.isGameOver = true;
+    if (submitButton) submitButton.disabled = true;
     clearInterval(matchState.timerInterval);
     clearInterval(matchState.pollInterval);
 
@@ -680,6 +672,7 @@
           </div>
 
           <!-- Nút điều hướng -->
+          <button type="button" id="btnPvpViewChat" class="btn btn-outline-info mb-3">Xem lại chat trong trận</button>
           <div style="display:flex; justify-content:center; gap:16px;">
             <button type="button" id="btnPvpReturnHome" class="btn btn-outline-light px-4 py-2 fw-bold" style="font-size:15px; border-radius:10px;">
               🏠 Về Trang Chủ
@@ -694,6 +687,11 @@
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('btnPvpViewChat')?.addEventListener('click', () => {
+      document.getElementById('pvpMatchResultsModal').style.display = 'none';
+      document.getElementById('pvpChat')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
 
     document.getElementById('btnPvpReturnHome')?.addEventListener('click', () => {
       sessionStorage.removeItem('pvpMatchData');
@@ -748,7 +746,7 @@
               ${isMe ? '<span style="color:#38bdf8; font-size:11px;"> (Bạn)</span>' : ''}
             </td>
             <td style="padding:10px 6px; text-align:center; font-weight:800; color:${r.score >= 100 ? '#00e676' : '#fde047'};">
-              ${r.score || 0}đ
+              ${r.quality_score === null ? '—' : (r.score || 0)}đ
             </td>
             <td style="padding:10px 6px; text-align:center; color:#cbd5e1;">
               ${r.finish_time ? r.finish_time + 's' : 'Hết giờ'}
@@ -768,7 +766,7 @@
 
     // Render thông điệp riêng cho người chơi
     if (myBox && myResult) {
-      const myRank = myResult.placement || myResult.rank || 1;
+      const myRank = myResult.placement || myResult.rank || myResult.final_rank || 1;
       const myDelta = myResult.rating_change || 0;
       const isWin = myRank === 1;
 
@@ -777,7 +775,7 @@
           ${isWin ? '👑 CHÚC MỪNG BẠN ĐÃ GIÀNH CHIẾN THẮNG!' : `BẠN ĐẠT HẠNG #${myRank} TRONG TRẬN ĐẤU`}
         </div>
         <div style="font-size:14px; color:#e2e8f0;">
-          Điểm số: <strong style="color:#fde047;">${myResult.score || 0}đ</strong> • 
+          Điểm số: <strong style="color:#fde047;">${myResult.quality_score === null ? 'chưa xác định' : (myResult.score || 0) + 'đ'}</strong> • 
           Thời gian: <strong style="color:#38bdf8;">${myResult.finish_time ? myResult.finish_time + 's' : 'Hết giờ'}</strong> • 
           Biến động Elo: <strong style="color:${myDelta >= 0 ? '#22c55e' : '#ef4444'};">${myDelta >= 0 ? '+' + myDelta : myDelta} Điểm</strong>
         </div>
@@ -818,38 +816,22 @@
     /**
      * Được gọi từ BanDoGame.js mỗi khi người chơi xoay ống hoặc tráo ống Vàng
      */
-    onPlayerProgress: function (progress) {
-      // 1. Cập nhật tức thời dòng của người chơi hiện tại trên bảng điểm cục bộ
-      if (matchState.myUserId && Array.isArray(matchState.leaderboard)) {
-        const me = matchState.leaderboard.find(p => p.user_id === matchState.myUserId);
-        if (me) {
-          me.score = progress.currentScore || 0;
-          me.pairs_connected = progress.connectedPairs || 0;
-          me.total_pairs = progress.totalPairs || me.total_pairs;
-          sapXepVaRenderLeaderboard();
-        }
-      }
-
-      // 2. Gửi tiến trình lên server
-      baoCaoTienTrinhLenServer(progress);
-    },
-
-    /**
-     * Được gọi từ BanDoGame.js khi người chơi nối đủ 100đ tất cả các đường ống
-     */
-    onPlayerVictory: function (victoryData) {
-      console.log('[PvP Match] Người chơi đạt 100đ qua màn!', victoryData);
-      const finishTime = ((Date.now() - matchState.startTime) / 1000).toFixed(1);
-
-      guiLoiGiaiVeServer({
-        score: victoryData.finalScore || 100,
-        duration: parseFloat(finishTime),
-        pairs_connected: (victoryData.pipes || []).length,
-        total_pairs: (victoryData.pipes || []).length,
-        total_flow_cells: victoryData.traces?.reduce((sum, t) => sum + (t.trace?.length || 0), 0) || 0,
+    onPlayerAction: function (action) {
+      if (!actionQueue || matchState.isCompleted || window.pvpSubmitting || window.pvpRestoring) return;
+      actionQueue.push(action).catch((error) => {
+        window.pvpSyncFailed = true;
+        hienThongBaoNhanh(error.message + ' Hãy tải lại trang để đồng bộ bàn.', '#ef4444');
       });
     },
+    onPlayerProgress: function (progress) {
+      if (submitButton) submitButton.disabled = progress.connectedPairs !== progress.totalPairs
+        || window.pvpSubmitting || window.pvpRestoring || window.pvpSyncFailed || matchState.isCompleted;
+    },
+    onPlayerVictory: function () {
+      // Kept for existing callers: connections only enable the explicit submit button.
+    },
 
+    onTimeout: xuLyHetGioThiDau,
     getState: function () {
       return matchState;
     },

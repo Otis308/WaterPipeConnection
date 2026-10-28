@@ -96,6 +96,8 @@ class PvpBoardStateService
                 'v'         => 2,
                 'rotations' => is_array($decoded['rotations']) ? $decoded['rotations'] : [],
                 'layout'    => is_array($decoded['layout'] ?? null) ? $decoded['layout'] : [],
+                'scoring'   => $decoded['scoring'] ?? null,
+                'last_action' => $decoded['last_action'] ?? null,
             ];
         }
         return ['v' => 2, 'rotations' => $decoded, 'layout' => []];
@@ -126,11 +128,11 @@ class PvpBoardStateService
                     break;
                 }
             }
+            if (!$cellInfo) return ['success' => false, 'error' => 'Không tìm thấy ô trong bản đồ.'];
             // OngDo và OngVang không xoay được (OngVang chỉ hoán đổi)
             if ($cellInfo && !empty($cellInfo['file'])) {
                 $file = $cellInfo['file'];
-                if (str_contains($file, 'OngDo') || str_contains($file, 'OngVang')
-                    || str_contains($file, 'BatDau') || str_contains($file, 'KetThuc')) {
+                if (!str_contains($file, 'OngXanh/')) {
                     return ['success' => false, 'error' => 'Ô này không thể xoay.'];
                 }
             }
@@ -316,7 +318,7 @@ class PvpBoardStateService
             'room_status'         => $data['room_status'],
             'started_at_ts'       => $data['started_at_ts'] ? (int)$data['started_at_ts'] : null,
             'time_limit_seconds'  => (int)$data['time_limit_seconds'],
-            'map_data'            => $mapData,
+            'map_data'            => $mapData ? PvpMapService::publicMapPayload($mapData) : null,
         ];
     }
 
@@ -337,166 +339,71 @@ class PvpBoardStateService
      * @param array $boardRotations Trạng thái xoay hiện tại từ board_rotations_json
      * @return array [
      *   'is_all_completed' => bool,
-     *   'pairs_result'     => [['pair_id', 'is_connected', 'path_length', 'optimal_length'], ...],
-     *   'official_score'   => int,
+     *   'pairs_result'     => [['pair_id', 'is_connected', 'path_length'], ...],
+     *   'official_score'   => int, // compatibility integer; read quality_score too
+     *   'quality_score'    => ?int,
+     *   'is_optimal'       => bool,
      *   'completed_pairs'  => int,
      *   'total_pairs'      => int,
      * ]
      */
     public static function verifyBoardSolution(array $mapData, array $boardRotations): array
     {
-        $numPairs = (int)($mapData['numPairs'] ?? 0);
-        $pipesList = $mapData['pipes'] ?? [];
-        $cellsList = $mapData['cells'] ?? [];
-
-        if ($numPairs === 0 || empty($pipesList) || empty($cellsList)) {
-            return [
-                'is_all_completed' => false,
-                'pairs_result'     => [],
-                'official_score'   => 0,
-                'completed_pairs'  => 0,
-                'total_pairs'      => $numPairs,
-                'error'            => 'Dữ liệu bản đồ không hợp lệ.',
-            ];
+        $baseline = PipeScoringService::baseline($mapData);
+        if ($baseline['status'] === 'invalid') {
+            return ['is_all_completed' => false, 'completed_pairs' => 0, 'total_pairs' => 0,
+                'pairs_result' => [], 'official_score' => 0, 'quality_score' => null,
+                'is_optimal' => false, 'score_status' => 'invalid_map'];
         }
-
-        // Bước 1: Tái dựng ma trận bàn cờ
-        // $board[$r][$c] = ['shape' => string, 'rotation' => int, 'role' => string, 'pairId' => int]
-        $normalizedState = [];
-        if (isset($boardRotations['v']) && isset($boardRotations['rotations'])) {
-            $normalizedState = $boardRotations;
-        } else {
-            $normalizedState = ['rotations' => $boardRotations, 'layout' => []];
-        }
-        $rotationMap = $normalizedState['rotations'] ?? [];
-        $layoutMap = $normalizedState['layout'] ?? [];
-
+        $pipes = $mapData['pipes'] ?? [];
+        $state = isset($boardRotations['rotations']) ? $boardRotations : ['rotations' => $boardRotations, 'layout' => []];
         $board = [];
-        foreach ($cellsList as $cell) {
-            $r = (int)$cell['r'];
-            $c = (int)$cell['c'];
-            $key = "{$r}-{$c}";
-            $layout = $layoutMap[$key] ?? [];
-
-            $file = $layout['file'] ?? ($cell['file'] ?? '');
-            $shape = $layout['shape'] ?? ($cell['shape'] ?? '');
-            if (empty($shape)) {
-                if (str_contains($file, 'BatDau') || str_contains($file, 'OngBatDau')) {
-                    $shape = 'BatDau';
-                } elseif (str_contains($file, 'KetThuc') || str_contains($file, 'OngKetThuc')) {
-                    $shape = 'KetThuc';
-                } elseif (str_contains($file, 'Thang')) {
-                    $shape = 'Thang';
-                } elseif (str_contains($file, 'ChuL')) {
-                    $shape = 'ChuL';
-                } elseif (str_contains($file, 'ChuThap')) {
-                    $shape = 'ChuThap';
-                } else {
-                    $shape = 'ChuL';
-                }
+        foreach ($mapData['cells'] ?? [] as $cell) {
+            $key = $cell['r'] . '-' . $cell['c'];
+            $layout = $state['layout'][$key] ?? $cell;
+            $rotation = $state['rotations'][$key] ?? ($cell['initialRot'] ?? 0);
+            if (!is_array($layout) || !is_string($layout['file'] ?? '') || !is_string($layout['shape'] ?? '')
+                || !is_int($rotation) || $rotation % 90 !== 0) {
+                return ['is_all_completed' => false, 'completed_pairs' => 0, 'total_pairs' => count($pipes),
+                    'pairs_result' => [], 'official_score' => 0, 'quality_score' => null,
+                    'is_optimal' => false, 'score_status' => 'invalid_board'];
             }
-
-            $rotation = array_key_exists($key, $rotationMap)
-                ? (int)$rotationMap[$key]
-                : (int)($cell['initialRot'] ?? 0);
-
-            $board[$r][$c] = [
-                'shape'    => $shape,
-                'rotation' => $rotation,
-                'pairId'   => (int)($layout['pairId'] ?? ($cell['pairId'] ?? 0)),
-                'role'     => $layout['role'] ?? ($cell['role'] ?? ''),
-            ];
+            $board[$cell['r']][$cell['c']] = ['shape' => PipeScoringService::shape($layout),
+                'rotation' => $rotation, 'role' => $cell['role'] ?? '', 'pairId' => (int)($cell['pairId'] ?? 0)];
         }
-
-        // Bước 2: Với mỗi pair, tìm Start và End rồi chạy BFS
-        $pairsResult = [];
-        $completedPairs = 0;
-        $totalPlayerLength = 0;
-        $totalOptimalLength = (int)($mapData['optimalTotalLength'] ?? 1);
-
-        foreach ($pipesList as $pipeInfo) {
-            $pairId = (int)$pipeInfo['pairId'];
-            $optimalLen = (int)$pipeInfo['shortestLength'];
-
-            // Tìm ô Start và End của cặp này trong board
-            $startCell = null;
-            $endCell   = null;
-            foreach ($board as $r => $cols) {
-                foreach ($cols as $c => $cell) {
-                    if ((int)$cell['pairId'] === $pairId) {
-                        if ($cell['role'] === 'start') $startCell = [$r, $c];
-                        if ($cell['role'] === 'end')   $endCell   = [$r, $c];
-                    }
-                }
-            }
-
-            if (!$startCell || !$endCell) {
-                $pairsResult[] = [
-                    'pair_id'       => $pairId,
-                    'is_connected'  => false,
-                    'path_length'   => 0,
-                    'optimal_length'=> $optimalLen,
-                    'error'         => 'Không tìm thấy ô Start hoặc End trong bản đồ.',
-                ];
-                continue;
-            }
-
-            // Chạy BFS từ Start → End
-            $bfsResult = self::bfsConnect($board, $startCell, $endCell, $pairId);
-
-            if ($bfsResult['connected']) {
-                $completedPairs++;
-                $totalPlayerLength += $bfsResult['path_length'];
-            }
-
-            $pairsResult[] = [
-                'pair_id'        => $pairId,
-                'is_connected'   => $bfsResult['connected'],
-                'path_length'    => $bfsResult['path_length'],
-                'optimal_length' => $optimalLen,
-            ];
+        $results = []; $lengths = []; $connected = 0;
+        foreach ($pipes as $pipe) {
+            $start = $pipe['start'] ?? []; $end = $pipe['end'] ?? [];
+            $from = $board[$start['r'] ?? 0][$start['c'] ?? 0] ?? [];
+            $to = $board[$end['r'] ?? 0][$end['c'] ?? 0] ?? [];
+            $id = (int)($pipe['pairId'] ?? 0);
+            $valid = ($from['role'] ?? '') === 'start' && ($to['role'] ?? '') === 'end'
+                && ($from['pairId'] ?? 0) === $id && ($to['pairId'] ?? 0) === $id;
+            $res = $valid ? self::bfsConnect($board, [$start['r'], $start['c']], [$end['r'], $end['c']], $id)
+                : ['connected' => false, 'path_length' => 0];
+            $lengths[] = $res['connected'] ? $res['path_length'] : null;
+            $connected += (int)$res['connected'];
+            $results[] = ['pair_id' => $id, 'is_connected' => $res['connected'], 'path_length' => $res['path_length']];
         }
-
-        // Bước 3: Tính điểm chính thức theo công thức chuẩn của BanDoGame.js
-        // Mỗi cặp có điểm tối đa = 100 / numPairs
-        // Mỗi ô đi thừa so với độ dài tối ưu bị trừ 10 điểm (tối thiểu 10đ/cặp)
-        $maxScorePerPipe = 100.0 / max(1, $numPairs);
-        $totalScoreFloat = 0.0;
-
-        foreach ($pairsResult as $pRes) {
-            if (!empty($pRes['is_connected'])) {
-                $extraCells = max(0, (int)$pRes['path_length'] - (int)$pRes['optimal_length']);
-                $pipeScore = max(10, (int)round($maxScorePerPipe - ($extraCells * 10)));
-                $totalScoreFloat += $pipeScore;
-            }
+        $score = PipeScoringService::score($lengths, $baseline);
+        // A new shorter vector is evidence to re-check a stale/corrupt certificate.
+        // Tradeoffs can remain incomparable after re-checking; their quality is unknown.
+        if ($score['score_status'] === 'incomparable_lengths' && empty($baseline['rechecked'])) {
+            $baseline = PipeScoringService::baseline($mapData, true);
+            $score = PipeScoringService::score($lengths, $baseline);
         }
-
-        $officialScore = (int)round($totalScoreFloat);
-
-        // QUY TẮC CỐT LÕI: Chỉ công nhận hoàn thành khi 100% số cặp được kết nối VÀ đạt đủ 100 điểm (không có ô thừa)
-        $isAllCompleted = ($completedPairs === $numPairs && $numPairs > 0 && $officialScore >= 100);
-
-        return [
-            'is_all_completed' => $isAllCompleted,
-            'pairs_result'     => $pairsResult,
-            'official_score'   => $officialScore,
-            'completed_pairs'  => $completedPairs,
-            'total_pairs'      => $numPairs,
-            'player_length'    => $totalPlayerLength,
-            'optimal_length'   => $totalOptimalLength,
-        ];
+        return $score + ['is_all_completed' => count($pipes) > 0 && $connected === count($pipes)
+                && count($pipes) === ($mapData['numPairs'] ?? 0) && $baseline['status'] !== 'invalid',
+            'completed_pairs' => $connected, 'total_pairs' => count($pipes), 'pairs_result' => $results,
+            'player_length' => array_sum($lengths), 'optimal_length' => $baseline['total'] ?? null];
     }
 
-    /**
-     * BFS từ ô Start đến ô End trong cùng một cặp pairId
-     * Chỉ đi qua các ô có kết nối cổng tương hỗ hợp lệ (bidirectional)
-     */
     private static function bfsConnect(array $board, array $start, array $end, int $pairId): array
     {
         [$startR, $startC] = $start;
         [$endR, $endC] = $end;
 
-        $queue = [[$startR, $startC, 1]]; // [row, col, distance]
+        $queue = [[$startR, $startC, 0]]; // [row, col, distance]
         $visited = [];
         $visited["{$startR}-{$startC}"] = true;
 
@@ -565,8 +472,8 @@ class PvpBoardStateService
      */
     public static function getOpenPorts(string $shape, int $rotation): array
     {
-        $defaultPorts = self::DEFAULT_PORTS[$shape] ?? [0, 2];
-        $steps = (int)(($rotation / 90)) % 4;
+        $defaultPorts = self::DEFAULT_PORTS[$shape] ?? [];
+        $steps = (int)(((($rotation % 360) + 360) % 360) / 90);
 
         if ($steps === 0) {
             return $defaultPorts;

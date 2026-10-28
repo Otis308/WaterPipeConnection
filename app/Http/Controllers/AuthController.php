@@ -40,7 +40,7 @@ class AuthController extends Controller
 
             // Admin → chuyển thẳng sang trang Admin
             if ($user->role === 'admin') {
-                return redirect()->route('admin.dashboard')->with('flash_success', 'Đăng nhập thành công! Chào mừng, ' . $user->name . '.');
+                return redirect('/admin')->with('flash_success', 'Đăng nhập thành công! Chào mừng, ' . $user->name . '.');
             }
 
             // User thường → trang chủ game

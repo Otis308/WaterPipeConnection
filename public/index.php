@@ -13,6 +13,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GameLevelController;
 use App\Http\Controllers\GamePlayController;
 use App\Http\Controllers\PdoLabController;
+use App\Http\Controllers\PlayerProfileController;
 
 // Hỗ trợ PHP built-in server (php -S localhost:8000 -t public) phục vụ file tĩnh trực tiếp
 if (php_sapi_name() === 'cli-server') {
@@ -38,13 +39,33 @@ if ($httpMethod === 'POST' && !empty($_POST['_method'])) {
 // Kiểm tra bảo mật CSRF Token (@csrf) cho các form Web POST/PUT/DELETE (Bài 7 Slide 22 & Bài 9 Slide 28)
 if (in_array($httpMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true) && !str_starts_with($requestUri, '/api/')) {
     $submittedToken = $_POST['_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
-    if (empty($submittedToken) || !hash_equals(csrf_token(), $submittedToken)) {
+    if (!is_string($submittedToken) || $submittedToken === '' || !hash_equals(csrf_token(), $submittedToken)) {
         abort(419, '419 | Page Expired — Thiếu hoặc sai CSRF Token (@csrf).');
     }
 }
 
 // ==================== ĐỊNH TUYẾN API (routes/api.php) ====================
 if (str_starts_with($requestUri, '/api/')) {
+    // Pure scoring endpoint for the browser-generated solo map; never opens a DB.
+    if ($requestUri === '/api/game/scoring-baseline' && $httpMethod === 'POST') {
+        header('Content-Type: application/json; charset=utf-8');
+        $raw = file_get_contents('php://input', false, null, 0, 65537);
+        $map = strlen($raw) <= 65536 ? json_decode($raw, true) : null;
+        if (!is_array($map)) {
+            http_response_code(422);
+            echo json_encode(['success' => false]);
+        } else {
+            $recheck = !empty($map['_recheck']);
+            unset($map['_scoring'], $map['_recheck']);
+            echo json_encode(['success' => true, 'data' => App\Services\PipeScoringService::baseline($map, $recheck)]);
+        }
+        exit;
+    }
+    // Session-only chat must bypass PvpApiController's legacy user_id fallback.
+    if ($requestUri === '/api/pvp/chat') {
+        (new App\Http\Controllers\Api\PvpChatController())->handle($httpMethod);
+        exit;
+    }
     // 1. Tuyến PvP Real-time, Matchmaking & Phòng đấu
     if (str_starts_with($requestUri, '/api/pvp/')) {
         $pvpApi = new PvpApiController();
@@ -60,6 +81,7 @@ if (str_starts_with($requestUri, '/api/')) {
             $requestUri === '/api/pvp/match-results' && $httpMethod === 'GET' => $pvpApi->getMatchResults(),
             $requestUri === '/api/pvp/submit-move' && $httpMethod === 'POST' => $pvpApi->submitMove(),
             $requestUri === '/api/pvp/submit-solution' && $httpMethod === 'POST' => $pvpApi->submitSolution(),
+            $requestUri === '/api/pvp/reconnect' && $httpMethod === 'GET' => $pvpApi->reconnect(),
             $requestUri === '/api/pvp/matchmaking/join' && $httpMethod === 'POST' => $pvpApi->joinMatchmaking(),
             $requestUri === '/api/pvp/matchmaking/cancel' && $httpMethod === 'POST' => $pvpApi->cancelMatchmaking(),
             $requestUri === '/api/pvp/leaderboard' && $httpMethod === 'GET' => $pvpApi->getRankedLeaderboard(),
@@ -153,6 +175,13 @@ if (str_starts_with($requestUri, '/api/')) {
 
 // ==================== ĐỊNH TUYẾN WEB (routes/web.php) ====================
 
+if ($requestUri === '/profile' && $httpMethod === 'GET') {
+    (new PlayerProfileController())->show();
+}
+if ($requestUri === '/profile' && $httpMethod === 'POST') {
+    (new PlayerProfileController())->update();
+}
+
 // 1. Giao diện Game Nối Ống Nước gốc (Giữ nguyên 100% UI/UX)
 if (($requestUri === '/' || $requestUri === '/index.html' || $requestUri === '/game/home') && $httpMethod === 'GET') {
     (new GamePlayController())->home();
@@ -197,14 +226,14 @@ if ($requestUri === '/pdo-lab' && $httpMethod === 'GET') {
 if ($requestUri === '/login' && $httpMethod === 'GET') {
     (new AuthController())->showLogin();
 }
-if ($requestUri === '/login' && $httpMethod === 'POST') {
-    (new AuthController())->login();
+if ($requestUri === '/levels' && $httpMethod === 'GET') {
+    (new GameLevelController())->index($_GET);
 }
-if ($requestUri === '/register' && $httpMethod === 'POST') {
-    (new AuthController())->register();
+if ($requestUri === '/levels/create' && $httpMethod === 'GET') {
+    (new GameLevelController())->create($_GET);
 }
-if ($requestUri === '/logout' && $httpMethod === 'POST') {
-    (new AuthController())->logout();
+if ($requestUri === '/levels' && $httpMethod === 'POST') {
+    (new GameLevelController())->store($_POST);
 }
 
 // 4. Admin user management - Chỉ Admin được truy cập

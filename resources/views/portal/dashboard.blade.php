@@ -345,7 +345,7 @@
                                                 <span>✏️</span> Sửa
                                             </a>
                                             <div class="menu-divider"></div>
-                                            <button type="button" class="menu-item danger" onclick="confirmDeleteLevel({{ $lvl['id'] }}, '{{ $lvl['title'] }}')">
+                                            <button type="button" class="menu-item danger" data-id="{{ $lvl['id'] }}" data-title="{{ $lvl['title'] }}" onclick="confirmDeleteLevel(this.dataset.id, this.dataset.title)">
                                                 <span>🗑️</span> Xóa
                                             </button>
                                         </div>
@@ -481,7 +481,7 @@
                                         {{ strtoupper($s['result'] ?? 'END') }}
                                     </span>
                                 </td>
-                                <td><strong>+{{ $s['score_earned'] ?? 0 }}</strong></td>
+                                <td><strong>{{ $s['score_label'] ?? $s['score_earned'] ?? 0 }}</strong></td>
                                 <td>{{ round(($s['duration_ms'] ?? 0) / 1000, 2) }}s</td>
                             </tr>
                         @empty

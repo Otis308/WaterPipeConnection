@@ -252,7 +252,6 @@ class PvpMapService
                 'color'          => $pipe['color'] ?? null,
                 'start'          => $pipe['start'] ?? null,
                 'end'            => $pipe['end'] ?? null,
-                'shortestLength' => (int)($pipe['shortestLength'] ?? 0),
             ];
         }
 
@@ -262,11 +261,12 @@ class PvpMapService
             'mapSizeKey'         => $mapData['mapSizeKey'] ?? null,
             'difficulty'         => $mapData['difficulty'] ?? null,
             'numPairs'           => (int)($mapData['numPairs'] ?? 0),
-            'optimalTotalLength' => (int)($mapData['optimalTotalLength'] ?? 0),
+            'scoring_status' => $mapData['_scoring']['status'] ?? 'unproven',
             'thinkingTimeMs'     => (int)($mapData['thinkingTimeMs'] ?? 300000),
             'pipes'              => $pipes,
             'cells'              => $cells,
         ];
+        if (isset($mapData['chat_match_id'])) $public['chat_match_id'] = $mapData['chat_match_id'];
         $public['config_hash'] = self::configHash($public);
         return $public;
     }

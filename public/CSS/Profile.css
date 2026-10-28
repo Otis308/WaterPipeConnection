@@ -1,0 +1,25 @@
+body {
+    min-height: 100vh;
+    margin: 0;
+    background: #123b64 url('/Images/NenLon.png') center / cover fixed;
+    font-family: 'Chakra Petch', sans-serif;
+    color: #183551;
+}
+.profile-shell { max-width: 1000px; }
+.profile-title { color: #fff; text-shadow: 2px 2px #183551; margin-bottom: 1rem; }
+.profile-panel { background: #f3f3f3; border: 3px solid #0059ff; border-radius: 15px; padding: 1.5rem; }
+.profile-panel h2 { font-size: 1.6rem; color: #0059ff; }
+.profile-avatar { border-radius: 50%; object-fit: cover; background: #e2edff; flex-shrink: 0; }
+.profile-identity { min-width: 0; overflow-wrap: anywhere; }
+.profile-bio { white-space: pre-wrap; overflow-wrap: anywhere; }
+.profile-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+.profile-stats > div { padding: .85rem; border-radius: 10px; background: #e2edff; }
+.profile-stats span, .profile-stats strong { display: block; }
+.profile-stats strong { font-size: 1.5rem; color: #0059ff; }
+.profile-panel .table { --bs-table-bg: transparent; min-width: 650px; }
+.profile-panel input, .profile-panel textarea { border-color: #91b7ff; }
+@media (max-width: 575px) {
+    .profile-panel { padding: 1rem; }
+    .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .profile-title { font-size: 1.8rem; }
+}

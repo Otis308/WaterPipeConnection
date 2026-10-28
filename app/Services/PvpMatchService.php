@@ -41,10 +41,13 @@ class PvpMatchService
     {
         $roomCode = strtoupper(trim($roomCode));
 
+        $chat = new PvpChatService($this->conn);
+        $chat->ensureSchema(); // DDL must not implicitly commit the match transaction.
+
         // Dùng transaction + FOR UPDATE để ngăn 2 request đồng thời bắt đầu cùng lúc
         $this->conn->beginTransaction();
         try {
-            $stmt = $this->conn->prepare("SELECT * FROM pvp_rooms WHERE room_code = ? FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT * FROM pvp_rooms WHERE room_code = ?" . $this->forUpdate());
             $stmt->execute([$roomCode]);
             $room = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -109,6 +112,8 @@ class PvpMatchService
                 $seedKey
             );
 
+            $mapData['_scoring'] = PipeScoringService::baseline($mapData);
+            $mapData['chat_match_id'] = $chat->createMatch((int)$room['id'], $players);
             $now     = time();
             $mapJson = json_encode($mapData, JSON_UNESCAPED_UNICODE);
 
@@ -130,12 +135,10 @@ class PvpMatchService
                 ")->execute([$p['id']]);
             }
 
-            $this->conn->commit();
-
-            // 4. Khởi tạo board state riêng cho từng người chơi
             foreach ($players as $p) {
                 $this->boardStateService->initBoardForPlayer((int)$p['id'], $mapData);
             }
+            $this->conn->commit();
 
             // 5. Chuẩn bị danh sách người chơi cho event
             $formattedPlayers = [];
@@ -165,7 +168,7 @@ class PvpMatchService
                 'success'   => true,
                 'message'   => 'Trận đấu đã chính thức bắt đầu!',
                 'room_code' => $roomCode,
-                'map_data'  => $mapData,
+                'map_data'  => PvpMapService::publicMapPayload($mapData),
                 'players'   => $formattedPlayers,
             ];
         } catch (\Throwable $e) {
@@ -176,267 +179,132 @@ class PvpMatchService
         }
     }
 
-    /**
-     * Cập nhật tiến độ / điểm tạm thời khi người chơi thao tác hoặc nối thành công 1 cặp đường ống
-     * NOTE: Endpoint này KHÔNG xác nhận chiến thắng. Chỉ cập nhật tiến trình tiến độ.
-     * Điểm tạm tối đa 99 — 100 điểm chỉ do submitSolution (BFS verified) cấp.
-     */
+    /** Ordered, idempotent actions and submissions share the room row lock.
+     * Scores and completion flags from clients are never evaluation inputs. */
     public function submitMoveOrProgress(int $userId, string $roomCode, array $progressData): array
     {
-        $roomCode = strtoupper(trim($roomCode));
-        $room     = $this->getActiveRoom($roomCode);
-
-        if (!$room) {
-            return ['success' => false, 'message' => 'Trận đấu không tồn tại hoặc đã kết thúc.'];
-        }
-
-        $player = $this->getRoomPlayer($room['id'], $userId);
-        if (!$player) {
-            return ['success' => false, 'message' => 'Bạn không thuộc phòng đấu này.'];
-        }
-
-        // Idempotency: người đã hoàn thành không nhận cập nhật tiến độ nữa
-        if ($player['solve_status'] === 'completed') {
-            return ['success' => true, 'current_score' => (int)$player['current_score']];
-        }
-
-        // Chống gửi điểm giả: không cho client tự gửi score = 100 hoặc is_winner = true
-        if (!empty($progressData['score']) && (int)$progressData['score'] >= 100) {
-            return ['success' => false, 'message' => 'Điểm 100 phải được xác minh qua submit-solution.'];
-        }
-        if (!empty($progressData['is_winner'])) {
-            return ['success' => false, 'message' => 'Kết quả thắng phải do server xác minh.'];
-        }
-
-        $mapData = json_decode($room['map_config_json'], true) ?: [];
-
-        // 1. Xử lý thao tác xoay ống (Server-Authoritative)
-        $action = $progressData['action'] ?? '';
-        if ($action === 'rotate' || (isset($progressData['row']) && isset($progressData['col']) && !isset($progressData['rowB']))) {
-            $r = (int)$progressData['row'];
-            $c = (int)$progressData['col'];
-            $deg = (int)($progressData['degrees'] ?? 90);
-            $rotRes = $this->boardStateService->applyRotation((int)$player['id'], $r, $c, $deg, $mapData);
-            if (!$rotRes['success']) {
-                return ['success' => false, 'message' => $rotRes['error']];
-            }
-        } elseif ($action === 'swap' || (isset($progressData['rowA']) && isset($progressData['colA']) && isset($progressData['rowB']) && isset($progressData['colB']))) {
-            $rA = (int)$progressData['rowA'];
-            $cA = (int)$progressData['colA'];
-            $rB = (int)$progressData['rowB'];
-            $cB = (int)$progressData['colB'];
-            $swapRes = $this->boardStateService->applySwap((int)$player['id'], $rA, $cA, $rB, $cB, $mapData);
-            if (!$swapRes['success']) {
-                return ['success' => false, 'message' => $swapRes['error']];
-            }
-        }
-
-        // 2. Chạy BFS trên bàn cờ server để tính điểm và số cặp đã nối chính xác
-        $boardSnapshot = $this->boardStateService->getPlayerBoardSnapshot((int)$room['id'], $userId);
-        if ($boardSnapshot && !empty($boardSnapshot['board_state'])) {
-            $bfsRes = PvpBoardStateService::verifyBoardSolution($mapData, $boardSnapshot['board_state']);
-            $completedPairs = $bfsRes['completed_pairs'];
-            // Điểm tiến trình tạm thời khóa trần ở 99 (điểm 100 chỉ do submitSolution công nhận)
-            $tentativeScore = min(99, $bfsRes['official_score']);
-        } else {
-            $completedPairs = max(0, min(
-                (int)$room['num_pairs'],
-                (int)($progressData['completed_pairs'] ?? $progressData['pairs_connected'] ?? 0)
-            ));
-            $tentativeScore = max(0, min(99,
-                (int)($progressData['tentative_score'] ?? $progressData['current_score'] ?? 0)
-            ));
-        }
-
-        $now = time();
-        $this->conn->prepare("
-            UPDATE pvp_room_players
-            SET current_score = ?, completed_pairs = ?, last_heartbeat_ts = ?
-            WHERE id = ?
-        ")->execute([$tentativeScore, $completedPairs, $now, $player['id']]);
-
-        // Broadcast sự kiện tiến độ
-        $this->broadcaster->broadcast(new PlayerProgressUpdated(
-            $roomCode, $userId, $player['player_name'],
-            $completedPairs, (int)$room['num_pairs'],
-            $tentativeScore, 'playing'
-        ));
-
-        // Cập nhật Leaderboard real-time
-        $this->broadcastLiveLeaderboard($room['id'], $roomCode);
-
-        return [
-            'success'         => true,
-            'completed_pairs' => $completedPairs,
-            'current_score'   => $tentativeScore,
-        ];
+        return $this->evaluatePlayer($userId, $roomCode, $progressData, false);
     }
 
-    /**
-     * NỘP BÀI HOÀN THÀNH — SERVER-AUTHORITATIVE BFS VALIDATION (AC1)
-     *
-     * Luồng xử lý:
-     *  1. Xác thực người chơi và trạng thái trận
-     *  2. Lấy board_rotations_json từ DB (KHÔNG tin client gửi lên)
-     *  3. Chạy BFS trên trạng thái server để xác minh kết nối
-     *  4. Nếu KHÔNG hoàn thành hoặc điểm < 100: TỪ CHỐI chiến thắng, giữ solve_status = 'playing'
-     *  5. Chỉ khi BFS xác nhận 100% nối đúng và đạt 100 điểm: công nhận solve_status = 'completed'
-     *  6. Cập nhật DB trong transaction
-     *  7. Kiểm tra xem tất cả đã hoàn thành → finalizeMatch
-     *
-     * @param array $submission Dữ liệu từ client (chỉ dùng để nhận finish_time_ms, không tin score)
-     */
     public function submitSolution(int $userId, string $roomCode, array $submission): array
     {
+        return $this->evaluatePlayer($userId, $roomCode, $submission, true);
+    }
+
+    private function forUpdate(): string
+    {
+        return $this->conn->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+    }
+
+    private function evaluatePlayer(int $userId, string $roomCode, array $input, bool $submit): array
+    {
         $roomCode = strtoupper(trim($roomCode));
-        $room     = $this->getActiveRoom($roomCode);
-
-        if (!$room) {
-            return ['success' => false, 'message' => 'Trận đấu không còn ở trạng thái thi đấu.'];
-        }
-
-        $player = $this->getRoomPlayer($room['id'], $userId);
-        if (!$player) {
-            return ['success' => false, 'message' => 'Không tìm thấy đấu thủ trong trận.'];
-        }
-
-        // Idempotency: không cho nộp lặp nếu đã hoàn thành
-        if ($player['solve_status'] === 'completed') {
-            return [
-                'success'      => true,
-                'message'      => 'Bạn đã hoàn thành bài thi trước đó.',
-                'score'        => (int)$player['current_score'],
-                'is_completed' => true,
-            ];
-        }
-
-        // Chặn các trường giả mạo từ client
-        if (!empty($submission['is_winner']) || !empty($submission['force_win'])) {
-            return ['success' => false, 'message' => 'Không được phép tự tuyên bố chiến thắng.'];
-        }
-
-        // =============================================================
-        // BFS SERVER-AUTHORITATIVE: Lấy board state từ DB, KHÔNG tin client
-        // =============================================================
-        $mapData = json_decode($room['map_config_json'], true) ?: [];
-
-        // Lấy board state của người chơi này từ database
-        $boardSnapshot = $this->boardStateService->getPlayerBoardSnapshot((int)$room['id'], $userId);
-        $boardState = $boardSnapshot ? $boardSnapshot['board_state'] : [];
-
-        // Chạy BFS phía server
-        $bfsResult = PvpBoardStateService::verifyBoardSolution($mapData, $boardState);
-
-        $officialScore  = $bfsResult['official_score'];
-        $isCompleted    = $bfsResult['is_all_completed'];
-        $completedPairs = $bfsResult['completed_pairs'];
-
-        // finish_time_ms: nhận từ client nhưng validate range
-        $finishTimeMs = !empty($submission['finish_time_ms'])
-            ? max(1000, (int)$submission['finish_time_ms'])
-            : (isset($submission['duration']) ? max(1000, (int)($submission['duration'] * 1000)) : 60000);
-
-        // Giới hạn tối đa = time_limit_seconds của phòng (tránh client gửi giá trị âm hoặc quá lớn)
-        $timeLimitMs = (int)$room['time_limit_seconds'] * 1000;
-        $finishTimeMs = min($finishTimeMs, $timeLimitMs);
-
-        // =============================================================
-        // NẾU CHƯA HOÀN THÀNH HOẶC CHƯA ĐẠT 100 ĐIỂM: TỪ CHỐI CHIẾN THẮNG
-        // =============================================================
-        if (!$isCompleted || $officialScore < 100) {
-            // Cập nhật điểm tạm (tối đa 99), giữ trạng thái playing
-            $safeScore = min(99, $officialScore);
-            $this->conn->prepare("
-                UPDATE pvp_room_players 
-                SET current_score = ?, completed_pairs = ?
-                WHERE id = ?
-            ")->execute([$safeScore, $completedPairs, $player['id']]);
-
-            return [
-                'success'         => false,
-                'message'         => 'Xác minh thất bại: Đường ống chưa được nối thông hoặc chưa đạt điểm tối đa (100đ). Cần hoàn thành đúng tất cả các cặp ống bằng đường đi ngắn nhất.',
-                'official_score'  => $safeScore,
-                'is_completed'    => false,
-                'completed_pairs' => $completedPairs,
-                'total_pairs'     => (int)$room['num_pairs'],
-                'pairs_result'    => $bfsResult['pairs_result'],
-            ];
-        }
-
-        // =============================================================
-        // KHI ĐÃ ĐẠT ĐỦ 100 ĐIỂM VÀ TẤT CẢ CẶP KẾT NỐI HỢP LỆ:
-        // Cập nhật database trong transaction để tránh race condition
-        // =============================================================
         $this->conn->beginTransaction();
         try {
-            // Re-check trong transaction để ngăn race condition
-            $stmtCheck = $this->conn->prepare("SELECT solve_status FROM pvp_room_players WHERE id = ? FOR UPDATE");
-            $stmtCheck->execute([$player['id']]);
-            $freshPlayer = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-            if ($freshPlayer && $freshPlayer['solve_status'] === 'completed') {
+            $stmt = $this->conn->prepare('SELECT * FROM pvp_rooms WHERE room_code = ?' . $this->forUpdate());
+            $stmt->execute([$roomCode]); $room = $stmt->fetch(PDO::FETCH_ASSOC);
+            $player = $room ? $this->getRoomPlayer((int)$room['id'], $userId) : null;
+            if (!$room || !$player) {
                 $this->conn->rollBack();
-                return [
-                    'success'      => true,
-                    'message'      => 'Bạn đã hoàn thành bài thi (concurrent check).',
-                    'score'        => (int)$player['current_score'],
-                    'is_completed' => true,
-                ];
+                return ['success' => false, 'message' => 'Trận đấu không còn diễn ra hoặc bạn không thuộc phòng.'];
             }
-
-            // Xác định thứ hạng hiện tại (trong transaction)
-            $stmtRank = $this->conn->prepare("
-                SELECT COUNT(*) FROM pvp_room_players
-                WHERE room_id = ? AND solve_status = 'completed'
-            ");
-            $stmtRank->execute([$room['id']]);
-            $currentRank = (int)$stmtRank->fetchColumn() + 1;
-
-            // Cập nhật bản ghi chính thức hoàn thành
-            $this->conn->prepare("
-                UPDATE pvp_room_players
-                SET current_score = 100, completed_pairs = ?,
-                    solve_status = 'completed', finish_time_ms = ?, final_rank = ?
-                WHERE id = ?
-            ")->execute([$completedPairs, $finishTimeMs, $currentRank, $player['id']]);
-
+            $state = PvpBoardStateService::decodeBoardState($player['board_rotations_json'] ?? null);
+            $version = (int)$player['board_state_version'];
+            if ($player['solve_status'] === 'completed') {
+                $this->conn->rollBack();
+                return ['success' => true, 'is_completed' => true, 'current_score' => (int)$player['current_score'],
+                    'evaluation' => $state['scoring'] ?? null, 'board_state_version' => $version];
+            }
+            if ($room['status'] !== 'in_progress') {
+                $this->conn->rollBack();
+                return ['success' => false, 'message' => 'Trận đấu không còn diễn ra.'];
+            }
+            if (time() >= (int)$room['started_at_ts'] + (int)$room['time_limit_seconds']) {
+                $this->conn->rollBack();
+                $this->finalizeMatch($roomCode, 'time_out');
+                return ['success' => false, 'match_ended' => true, 'message' => 'Đã hết giờ thi đấu.'];
+            }
+            if (!$state['rotations']) {
+                $this->conn->rollBack();
+                return ['success' => false, 'message' => 'Thiếu trạng thái bàn trên server.'];
+            }
+            $action = $input['action'] ?? '';
+            $duplicate = false;
+            if ($action !== '' || $submit) {
+                $expected = $input['expected_version'] ?? null;
+                $actionId = $input['action_id'] ?? '';
+                $hash = hash('sha256', json_encode(array_intersect_key($input, array_flip(
+                    ['action', 'row', 'col', 'degrees', 'rowA', 'colA', 'rowB', 'colB', 'expected_version']))));
+                $last = $state['last_action'] ?? [];
+                $duplicate = !$submit && is_int($expected) && is_string($actionId) && $actionId !== ''
+                    && ($last['id'] ?? '') === $actionId && ($last['hash'] ?? '') === $hash && $version === $expected + 1;
+                if (!is_int($expected) || (!$duplicate && $expected !== $version)) {
+                    $this->conn->rollBack();
+                    return ['success' => false, 'message' => 'Phiên bản bàn không khớp. Hãy tải lại bàn từ server.',
+                        'board_state_version' => $version];
+                }
+                if (!$submit && (!is_string($actionId) || strlen($actionId) < 1 || strlen($actionId) > 100)) {
+                    $this->conn->rollBack();
+                    return ['success' => false, 'message' => 'Thiếu mã thao tác.'];
+                }
+            }
+            $map = json_decode($room['map_config_json'], true) ?: [];
+            $map['_scoring'] = PipeScoringService::baseline($map);
+            if (!$duplicate && !$submit && $action !== '') {
+                if ($action === 'rotate' && isset($input['row'], $input['col'])) {
+                    $result = $this->boardStateService->applyRotation((int)$player['id'],
+                        (int)$input['row'], (int)$input['col'], (int)($input['degrees'] ?? 90), $map);
+                } elseif ($action === 'swap' && isset($input['rowA'], $input['colA'], $input['rowB'], $input['colB'])) {
+                    $result = $this->boardStateService->applySwap((int)$player['id'], (int)$input['rowA'],
+                        (int)$input['colA'], (int)$input['rowB'], (int)$input['colB'], $map);
+                } else {
+                    $result = ['success' => false, 'error' => 'Thao tác không hợp lệ.'];
+                }
+                if (!$result['success']) {
+                    $this->conn->rollBack();
+                    return ['success' => false, 'message' => $result['error']];
+                }
+                $state = $result['board_state']; $version = $result['board_state_version'];
+                $state['last_action'] = ['id' => $actionId, 'hash' => $hash];
+            }
+            $evaluation = PvpBoardStateService::verifyBoardSolution($map, $state);
+            $state['scoring'] = $evaluation;
+            $done = $submit && $evaluation['is_all_completed'];
+            $finish = $done ? max(1, (time() - (int)$room['started_at_ts']) * 1000) : null;
+            $this->conn->prepare('UPDATE pvp_room_players SET board_rotations_json = ?, current_score = ?,
+                completed_pairs = ?, solve_status = ?, finish_time_ms = ?, last_heartbeat_ts = ? WHERE id = ?')
+                ->execute([json_encode($state), $evaluation['official_score'], $evaluation['completed_pairs'],
+                    $done ? 'completed' : 'playing', $finish, time(), $player['id']]);
+            $this->conn->prepare('UPDATE pvp_rooms SET map_config_json = ? WHERE id = ?')
+                ->execute([json_encode($map), $room['id']]);
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
-            return ['success' => false, 'message' => 'Lỗi cập nhật kết quả: ' . $e->getMessage()];
+            if ($this->conn->inTransaction()) $this->conn->rollBack();
+            return ['success' => false, 'message' => 'Không thể cập nhật bàn: ' . $e->getMessage()];
         }
-
-        // Broadcast PlayerCompleted
-        $this->broadcaster->broadcast(new PlayerCompleted(
-            $roomCode, $userId, $player['player_name'],
-            100, $finishTimeMs, $currentRank
-        ));
-
-        // Broadcast Leaderboard
-        $leaderboard = $this->broadcastLiveLeaderboard($room['id'], $roomCode);
-
-        // Kiểm tra tất cả đã hoàn thành → kết thúc trận sớm
-        $stmtCheckAll = $this->conn->prepare("
-            SELECT COUNT(*) FROM pvp_room_players
-            WHERE room_id = ? AND solve_status != 'completed'
-        ");
-        $stmtCheckAll->execute([$room['id']]);
-        $remainingCount = (int)$stmtCheckAll->fetchColumn();
-
-        if ($remainingCount === 0) {
-            $this->finalizeMatch($roomCode, 'all_completed');
+        $leaderboard = $this->broadcastLiveLeaderboard((int)$room['id'], $roomCode);
+        if ($done) {
+            $rank = 1;
+            foreach ($leaderboard as $entry) if ($entry['user_id'] === $userId) $rank = $entry['rank'];
+            $this->broadcaster->broadcast(new PlayerCompleted($roomCode, $userId, $player['player_name'],
+                $evaluation['official_score'], $finish, $rank));
+            $check = $this->conn->prepare("SELECT COUNT(*) FROM pvp_room_players WHERE room_id = ? AND solve_status != 'completed'");
+            $check->execute([$room['id']]);
+            if ((int)$check->fetchColumn() === 0) $this->finalizeMatch($roomCode, 'all_completed');
         }
+        return ['success' => !$submit || $done, 'is_completed' => $done, 'evaluation' => $evaluation,
+            'current_score' => $evaluation['official_score'], 'official_score' => $evaluation['official_score'],
+            'board_state_version' => $version, 'completed_pairs' => $evaluation['completed_pairs'],
+            'message' => $submit && !$done ? 'Cần nối đúng tất cả các cặp trước khi nộp bài.' : 'Đã ghi nhận bàn.',
+            'leaderboard' => $leaderboard];
+    }
 
-        return [
-            'success'        => true,
-            'official_score' => 100,
-            'is_completed'   => true,
-            'bfs_verified'   => true,
-            'pairs_result'   => $bfsResult['pairs_result'],
-            'rank'           => $currentRank,
-            'finish_time_ms' => $finishTimeMs,
-            'leaderboard'    => $leaderboard,
-        ];
+    public function finalizeIfExpired(string $roomCode): void
+    {
+        $room = $this->getActiveRoom(strtoupper(trim($roomCode)));
+        if ($room && time() >= (int)$room['started_at_ts'] + (int)$room['time_limit_seconds']) {
+            $this->finalizeMatch($roomCode, 'time_out');
+        }
     }
 
     /**
@@ -450,7 +318,7 @@ class PvpMatchService
         $this->conn->beginTransaction();
         try {
             // Lock phòng trước khi xử lý (ngăn 2 request finalizeMatch đồng thời)
-            $stmt = $this->conn->prepare("SELECT * FROM pvp_rooms WHERE room_code = ? FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT * FROM pvp_rooms WHERE room_code = ?" . $this->forUpdate());
             $stmt->execute([$roomCode]);
             $room = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -476,25 +344,27 @@ class PvpMatchService
                 return ['success' => false, 'message' => 'Không có người chơi trong phòng.'];
             }
 
-            // Sắp xếp thứ hạng chính thức:
-            // 1. Điểm cao nhất
-            // 2. Đã hoàn thành (solve_status = 'completed') đứng trước
-            // 3. Thời gian hoàn thành ngắn hơn
-            // 4. Số cặp ống nhiều hơn
-            usort($players, function ($a, $b) {
-                if ($a['current_score'] !== $b['current_score']) {
-                    return $b['current_score'] <=> $a['current_score'];
+            // At the deadline the last accepted server board is the submission.
+            if ($reason === 'time_out') {
+                $map = json_decode($room['map_config_json'], true) ?: [];
+                foreach ($players as &$p) {
+                    if ($p['solve_status'] === 'completed') continue;
+                    $state = PvpBoardStateService::decodeBoardState($p['board_rotations_json'] ?? null);
+                    $evaluation = PvpBoardStateService::verifyBoardSolution($map, $state);
+                    $state['scoring'] = $evaluation;
+                    $p['current_score'] = $evaluation['official_score'];
+                    $p['completed_pairs'] = $evaluation['completed_pairs'];
+                    $p['solve_status'] = $evaluation['is_all_completed'] ? 'completed' : 'playing';
+                    $p['finish_time_ms'] = $evaluation['is_all_completed'] ? (int)$room['time_limit_seconds'] * 1000 : null;
+                    $p['board_rotations_json'] = json_encode($state);
+                    $this->conn->prepare('UPDATE pvp_room_players SET current_score = ?, completed_pairs = ?,
+                        solve_status = ?, finish_time_ms = ?, board_rotations_json = ? WHERE id = ?')
+                        ->execute([$p['current_score'], $p['completed_pairs'], $p['solve_status'],
+                            $p['finish_time_ms'], $p['board_rotations_json'], $p['id']]);
                 }
-                $aDone = ($a['solve_status'] === 'completed') ? 1 : 0;
-                $bDone = ($b['solve_status'] === 'completed') ? 1 : 0;
-                if ($aDone !== $bDone) {
-                    return $bDone <=> $aDone;
-                }
-                if ($aDone && $bDone && $a['finish_time_ms'] && $b['finish_time_ms']) {
-                    return $a['finish_time_ms'] <=> $b['finish_time_ms'];
-                }
-                return $b['completed_pairs'] <=> $a['completed_pairs'];
-            });
+                unset($p);
+            }
+            usort($players, [PipeScoringService::class, 'comparePlayers']);
 
             // Gán rank 1..N
             $rankInputForElo = [];
@@ -576,6 +446,7 @@ class PvpMatchService
                     'player_name'     => $p['player_name'],
                     'final_rank'      => $rank,
                     'score'           => (int)$p['current_score'],
+                    'quality_score' => json_decode($p['board_rotations_json'] ?? '{}', true)['scoring']['quality_score'] ?? null,
                     'completed_pairs' => (int)$p['completed_pairs'],
                     'solve_status'    => $p['solve_status'],
                     'finish_time_ms'  => $p['finish_time_ms'] ? (int)$p['finish_time_ms'] : null,
@@ -690,17 +561,14 @@ class PvpMatchService
     {
         $stmt = $this->conn->prepare("
             SELECT rp.user_id, rp.player_name, rp.current_score, rp.completed_pairs, rp.total_pairs,
-                   rp.solve_status, rp.finish_time_ms, rp.connection_status, u.pvp_tier
+                   rp.solve_status, rp.finish_time_ms, rp.connection_status, rp.board_rotations_json, u.pvp_tier
             FROM pvp_room_players rp
             INNER JOIN users u ON rp.user_id = u.id
             WHERE rp.room_id = ?
-            ORDER BY rp.current_score DESC,
-                     (CASE WHEN rp.solve_status = 'completed' THEN 1 ELSE 0 END) DESC,
-                     rp.finish_time_ms ASC,
-                     rp.completed_pairs DESC
         ");
         $stmt->execute([$roomId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        usort($rows, [PipeScoringService::class, 'comparePlayers']);
 
         $leaderboard = [];
         foreach ($rows as $idx => $r) {
@@ -709,6 +577,7 @@ class PvpMatchService
                 'user_id'           => (int)$r['user_id'],
                 'player_name'       => $r['player_name'],
                 'current_score'     => (int)$r['current_score'],
+                'quality_score'     => json_decode($r['board_rotations_json'] ?? '{}', true)['scoring']['quality_score'] ?? null,
                 'completed_pairs'   => (int)$r['completed_pairs'],
                 'total_pairs'       => (int)$r['total_pairs'],
                 'solve_status'      => $r['solve_status'],

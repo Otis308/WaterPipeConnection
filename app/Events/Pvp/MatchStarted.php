@@ -28,7 +28,7 @@ class MatchStarted implements ShouldBroadcast
     {
         return [
             'room_code'          => $this->roomCode,
-            'map_data'           => $this->mapData,
+            'map_data'           => \App\Services\PvpMapService::publicMapPayload($this->mapData),
             'players'            => $this->players,
             'time_limit_seconds' => $this->timeLimitSeconds,
             'started_at_ts'      => $this->startedAtTs,

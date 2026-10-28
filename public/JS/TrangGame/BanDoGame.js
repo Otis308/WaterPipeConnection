@@ -229,7 +229,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // 4. Khởi tạo kho 24 bản đồ và chọn bản đồ
-  khoiTao24BanDoTrongDatabase();
+  if (sessionStorage.getItem("gameMode") !== "pvp") khoiTao24BanDoTrongDatabase();
 
   let selectedSizeKey = sessionStorage.getItem("mapSize") || "5x8";
   if (!customMapDatabase[selectedSizeKey]) selectedSizeKey = "5x8";
@@ -266,7 +266,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  window.banDoBanDau = chosenMapData;
+  window.chuanDiem = { status: isPvP ? "server" : "pending" };
+  sessionStorage.setItem("mapSize", selectedSizeKey);
+  window.khoiPhucBanPvP = function (state) {
+    chosenMapData.cells.forEach((cell) => {
+      const key = `${cell.r}-${cell.c}`;
+      const layout = state.layout?.[key] || cell;
+      const color = chosenMapData.pipes.find(p => p.pairId === cell.pairId)?.color;
+      themAnhVaoO(cell.r, cell.c, layout.file || cell.file, state.rotations?.[key] ?? cell.initialRot,
+        { pairId: cell.pairId, role: cell.role, endpointColor: cell.role ? color : null });
+    });
+    capNhatLuongNuoc();
+  };
   napBanDoTuDatabaseLenUI(chosenMapData, themAnhVaoO);
+  if (!isPvP) napChuanDiemBanDau();
 
   // 5. Khởi tạo HUD
   khoiTaoThanhHUDVaNutGoiY3Lan(selectedSizeKey, difficulty, chosenMapData);
@@ -281,7 +295,7 @@ document.addEventListener("DOMContentLoaded", function () {
     o1.innerHTML = o2.innerHTML;
     o2.innerHTML = tempHTML;
 
-    // Hoán đổi dataset đáp án chuẩn để logic tính điểm và gợi ý vẫn chính xác 100%
+    // Giữ metadata gợi ý theo nội dung ống; tính điểm dùng chuẩn map ban đầu.
     const tempCorrectPipe = o1.dataset.correctPipe;
     const tempCorrectRot = o1.dataset.correctRotation;
     o1.dataset.correctPipe = o2.dataset.correctPipe;
@@ -319,7 +333,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 8. Lắng nghe sự kiện click xoay ống Xanh & tráo đổi ống Vàng (chỉ 1 listener duy nhất)
   khungGame.addEventListener("click", function (event) {
-    if (daKetNoiThanhCong || window.isGameOver) return;
+    if (daKetNoiThanhCong || window.isGameOver || window.pvpSubmitting || window.pvpSyncFailed || window.pvpRestoring) return;
 
     const oDuocClick = event.target.closest(".KhungGame-OVuong");
     if (!oDuocClick) {
@@ -347,6 +361,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const gocMoi = (gocHienTai + 90) % 360;
         phanTuDeXoay.style.transform = `rotate(${gocMoi}deg)`;
         phanTuDeXoay.dataset.rotation = gocMoi;
+        window.PvpMatch?.onPlayerAction({ action: "rotate", row: Number(oDuocClick.dataset.row),
+          col: Number(oDuocClick.dataset.col), degrees: 90 });
 
         setTimeout(() => {
           phanTuDeXoay.dataset.dangXoay = "false";
@@ -382,6 +398,7 @@ document.addEventListener("DOMContentLoaded", function () {
           const oVuongCu = oVuongVangDuocChon;
           huyChonOVang();
           swapPipeContents(oVuongCu, oDuocClick);
+          window.PvpMatch?.onPlayerAction({ action: "swap", rowA: r1, colA: c1, rowB: r2, colB: c2 });
           if (typeof phatAmThanhDoiOng === "function") phatAmThanhDoiOng();
           capNhatLuongNuoc();
         } else {
@@ -857,7 +874,7 @@ function napBanDoTuDatabaseLenUI(mapData, themAnhVaoO) {
     themAnhVaoO(cell.r, cell.c, cell.file, cell.initialRot, {
       pairId: cell.pairId,
       role: cell.role,
-      endpointColor: cell.endpointColor,
+      endpointColor: cell.endpointColor || (cell.role ? mapData.pipes.find(p => p.pairId === cell.pairId)?.color : null),
       correctPipe: cell.correctPipe,
       correctRotation: cell.correctRotation,
     });
@@ -1030,7 +1047,7 @@ function thucHienGoiY1Buoc() {
     }
   }
 
-  alert("💡 Tất cả các đoạn ống chính đã đúng hướng! Hãy đóng bớt các nhánh phụ (nếu có) để đạt 100đ.");
+  alert("💡 Các đoạn ống trong gợi ý đã đúng hướng. Điểm chất lượng dựa trên đường đang nối và chuẩn đã chứng minh.");
   return false;
 }
 
@@ -1214,7 +1231,7 @@ function kiemTraKetNoiCapDuongOngBFS(pipePair) {
   );
   if (!startDiv) return { connected: false, bfsDistance: 0, totalFlowCells: 0, flowTrace: [] };
 
-  let queue = [{ div: startDiv, r: pipePair.start.r, c: pipePair.start.c, tuHuong: null, dist: 1, delayMs: 0 }];
+  let queue = [{ div: startDiv, r: pipePair.start.r, c: pipePair.start.c, tuHuong: null, dist: 0, delayMs: 0 }];
   let visited = new Set([`${pipePair.start.r}-${pipePair.start.c}`]);
   let flowTrace = [];
   let connectedToCorrectEnd = false;
@@ -1256,6 +1273,8 @@ function kiemTraKetNoiCapDuongOngBFS(pipePair) {
       const neighborDiv = document.querySelector(`.KhungGame-OVuong[data-row="${nr}"][data-col="${nc}"]`);
       const neighborInfo = layThongTinOngTaiO(neighborDiv);
       if (!neighborInfo) continue;
+      if (["BatDau", "KetThuc"].includes(neighborInfo.loaiOng) &&
+          (nr !== pipePair.end.r || nc !== pipePair.end.c)) continue;
 
       const oppositeDir = (huong + 2) % 4;
       if (neighborInfo.huongMo.includes(oppositeDir)) {
@@ -1307,76 +1326,70 @@ function kichHoatHieuUngNuoc(wrapper, loaiOng, tuHuong, gocXoay, colorHex = "#01
 /**
  * Hàm điều phối chính:
  * - Kiểm tra từng cặp đường ống (S1->E1 .. SK->EK)
- * - Tính điểm chuẩn tối đa 100đ: Đi đúng đường ngắn nhất đạt 100đ; đi xa hơn hoặc mở nhánh thừa bị trừ điểm
- * - Khi tất cả các cặp đường ống đạt đủ 100đ -> Kích hoạt hiệu ứng nước chảy tuần tự theo màu của từng cặp và qua màn!
+ * - Đo số bước BFS tới đúng đích; điểm chất lượng độc lập với hoàn thành.
+ * - PvP chỉ chốt bằng nút nộp bài, cho phép cải thiện sau khi nối đủ.
  */
 function capNhatLuongNuoc() {
+  if (daKetNoiThanhCong) return;
   resetNuoc();
 
   const numPairs = window.danhSachDuongOng.length;
   if (numPairs === 0) return;
 
-  const maxScorePerPipe = 100 / numPairs;
-  let totalScoreFloat = 0;
+  const isPvP = sessionStorage.getItem("gameMode") === "pvp";
   let connectedCount = 0;
-  let allTraces = [];
-
+  const allTraces = [];
+  const lengths = [];
   const hudPairsStatus = document.getElementById("hudPairsStatus");
   if (hudPairsStatus) hudPairsStatus.innerHTML = "";
-
   window.danhSachDuongOng.forEach((pipe) => {
     const res = kiemTraKetNoiCapDuongOngBFS(pipe);
     pipe.isConnected = res.connected;
-
-    let pipeScore = 0;
+    pipe.currentLength = res.connected ? res.bfsDistance : 0;
+    lengths.push(res.connected ? res.bfsDistance : null);
     if (res.connected) {
       connectedCount++;
-      // Số ô đi xa hơn hoặc mở nhánh thừa so với đường đi ngắn nhất chuẩn
-      const extraCells = Math.max(0, res.totalFlowCells - pipe.shortestLength);
-      pipeScore = Math.max(10, maxScorePerPipe - extraCells * 10);
       allTraces.push({ colorHex: pipe.color.hex, trace: res.flowTrace });
     }
-
-    totalScoreFloat += pipeScore;
-
     if (hudPairsStatus) {
       const badge = document.createElement("span");
-      badge.style.cssText = `padding:2px 8px; border-radius:6px; border:1px solid ${pipe.color.hex}; color:${pipe.color.hex}; background:rgba(0,0,0,0.55);`;
-      if (res.connected) {
-        const extra = Math.max(0, res.totalFlowCells - pipe.shortestLength);
-        badge.innerHTML = `S${pipe.pairId}→E${pipe.pairId}: ${extra === 0 ? "✅ Chuẩn" : "⚠️ +" + extra + " ô xa"}`;
-      } else {
-        badge.innerHTML = `S${pipe.pairId}→E${pipe.pairId}: ⏳`;
-      }
+      badge.style.cssText = `padding:2px 8px; border:1px solid ${pipe.color.hex}; color:${pipe.color.hex};`;
+      badge.textContent = `S${pipe.pairId}→E${pipe.pairId}: ${res.connected ? "✅ " + res.bfsDistance + " bước" : "⏳"}`;
       hudPairsStatus.appendChild(badge);
     }
   });
-
-  window.diemHienTai100 = Math.round(totalScoreFloat);
-  localStorage.setItem("tongDiem", String(window.diemHienTai100));
-
+  const evaluation = isPvP ? (window.danhGiaServer || { quality_score: null, score_status: "server" })
+    : PipeScore.score(lengths, window.chuanDiem);
+  evaluation.is_all_completed = connectedCount === numPairs;
+  window.danhGiaDiem = evaluation;
+  window.diemHienTai100 = evaluation.quality_score;
   const elScore = document.getElementById("valCurrentShortestScore");
   if (elScore) {
-    elScore.innerText = window.diemHienTai100;
-    elScore.style.color = window.diemHienTai100 === 100 ? "#00e676" : "#fde047";
+    elScore.innerText = evaluation.quality_score ?? "—";
+    elScore.style.color = evaluation.is_optimal ? "#00e676" : "#fde047";
+    elScore.title = evaluation.quality_score === null ? "Chưa xác định điểm chất lượng: " + evaluation.score_status
+      : (evaluation.is_optimal ? "Đã chứng minh tối ưu" : "Điểm chất lượng đường đi");
+  }
+  let status = document.getElementById("qualityScoreStatus");
+  if (!status && elScore) {
+    status = document.createElement("span"); status.id = "qualityScoreStatus";
+    elScore.parentElement.appendChild(status);
+  }
+  if (status) status.textContent = evaluation.quality_score === null ? " • Chưa xác định điểm chất lượng"
+    : (evaluation.is_optimal ? " • Tối ưu" : "");
+  if (typeof capNhatGiaoDienDiem === "function") capNhatGiaoDienDiem(evaluation.quality_score ?? "—");
+  if (!isPvP && evaluation.score_status === "incomparable_lengths" && !window.daDoiChieuChuan) {
+    window.daDoiChieuChuan = true;
+    napChuanDiemBanDau(true);
+  }
+  if (isPvP) {
+    window.PvpMatch?.onPlayerProgress({ connectedPairs: connectedCount, totalPairs: numPairs });
+    // Connection is editable until the explicit submission (or server deadline).
+    return;
   }
 
-  if (typeof capNhatGiaoDienDiem === "function") {
-    capNhatGiaoDienDiem(window.diemHienTai100, 100);
-  }
-
-  // Báo cáo tiến trình theo thời gian thực sang hệ thống PvP
-  if (sessionStorage.getItem("gameMode") === "pvp" && window.PvpMatch && typeof window.PvpMatch.onPlayerProgress === "function") {
-    window.PvpMatch.onPlayerProgress({
-      currentScore: window.diemHienTai100,
-      connectedPairs: connectedCount,
-      totalPairs: numPairs,
-      totalFlowCells: allTraces.reduce((sum, t) => sum + (t.trace ? t.trace.length : 0), 0),
-    });
-  }
-
-  // CHỈ THẮNG KHI NỐI THÔNG TẤT CẢ CÁC ĐƯỜNG ỐNG BẰNG ĐÚNG ĐƯỜNG NGẮN NHẤT (ĐẠT ĐỦ 100Đ)
-  if (connectedCount === numPairs && window.diemHienTai100 >= 100 && !daKetNoiThanhCong) {
+  // Completion depends on connectivity, including a legal detour.
+  if (connectedCount === numPairs && window.chuanDiem?.status !== "pending" && !daKetNoiThanhCong && !window.isGameOver) {
     daKetNoiThanhCong = true;
     if (typeof tamDungDongHoThoiGian === "function") {
       tamDungDongHoThoiGian();
@@ -1404,32 +1417,13 @@ function capNhatLuongNuoc() {
     });
 
     const timeoutWin = setTimeout(() => {
+      // Legacy accumulated rewards use tongDiem; quality remains a separate 0–100 value.
+      if (typeof congDiem === "function") congDiem(100);
+      if (typeof capNhatGiaoDienDiem === "function") capNhatGiaoDienDiem(window.diemHienTai100 ?? "—");
       if (typeof capNhatThongKeUser === "function") {
         capNhatThongKeUser("thang");
       }
-      if (typeof congDiem === "function") {
-        congDiem(100);
-      }
-
-      // Xử lý riêng cho chế độ PvP Real-time: không reload lại trang để hiện Modal Kết Quả
-      if (sessionStorage.getItem("gameMode") === "pvp") {
-        if (
-          typeof amThanhBat !== "undefined" &&
-          amThanhBat &&
-          typeof audioChienThang !== "undefined"
-        ) {
-          audioChienThang.currentTime = 0;
-          audioChienThang.play();
-        }
-        if (window.PvpMatch && typeof window.PvpMatch.onPlayerVictory === "function") {
-          window.PvpMatch.onPlayerVictory({
-            finalScore: window.diemHienTai100,
-            pipes: window.danhSachDuongOng,
-            traces: allTraces,
-          });
-        }
-        return;
-      }
+      alert(`Hoàn thành! Điểm chất lượng: ${window.diemHienTai100 ?? "chưa xác định"}${window.diemHienTai100 === null ? "" : "/100"}`);
 
       // Chế độ 1 Player mặc định
       if (
@@ -1450,5 +1444,26 @@ function capNhatLuongNuoc() {
     }, maxFinishMs + 500);
 
     cacTimeoutChoNuoc.push(timeoutWin);
+  }
+}
+// One baseline for the initial map. The endpoint shares the exact PHP proof engine
+// with PvP; no dependency on the dormant AI solutionPath flow.
+async function napChuanDiemBanDau(recheck = false) {
+  window.chuanDiem = { status: "pending" };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch("/api/game/scoring-baseline", {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
+      body: JSON.stringify({ ...window.banDoBanDau, _recheck: recheck }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error("Không có chuẩn điểm");
+    window.chuanDiem = result.data;
+  } catch (error) {
+    window.chuanDiem = { status: "unavailable" };
+  } finally {
+    clearTimeout(timer);
+    capNhatLuongNuoc();
   }
 }

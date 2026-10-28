@@ -18,10 +18,27 @@
     />
 
     <link rel="stylesheet" type="text/css" href="CSS/TrangGame.css" />
+    <link rel="stylesheet" type="text/css" href="CSS/PvpChat.css" />
   </head>
   <body>
     <!-- BẢN ĐỒ GAME -->
     <div class="KhungGame"></div>
+
+    <section id="pvpChat" class="pvp-chat" hidden aria-label="Chat trong trận PvP">
+      <button id="pvpChatToggle" class="pvp-chat-toggle" type="button" aria-expanded="true" aria-controls="pvpChatBody">Chat trong trận ▾</button>
+      <div id="pvpChatBody">
+        <ol id="pvpChatMessages" class="pvp-chat-messages" aria-label="Tin nhắn trong trận" tabindex="0"></ol>
+        <button id="pvpChatNew" type="button" hidden>Có tin mới ↓</button>
+        <p id="pvpChatStatus" role="status" aria-live="polite">Đang kết nối chat…</p>
+        <form id="pvpChatForm">
+          <label for="pvpChatInput">Tin nhắn (tối đa 500 ký tự)</label>
+          <div class="pvp-chat-compose">
+            <textarea id="pvpChatInput" rows="2" placeholder="Enter để gửi · Shift+Enter xuống dòng" disabled></textarea>
+            <button id="pvpChatSend" type="submit" disabled>Gửi</button>
+          </div>
+        </form>
+      </div>
+    </section>
 
     <!-- NÚT DỪNG -->
     <div class="NutDung am-thanh-click" id="nutDung">
@@ -1368,6 +1385,7 @@
 
     <script src="JS/TrangGame/TrangGame.js"></script>
     <script src="JS/TrangGame/SVGnuoc.js"></script>
+    <script src="JS/TrangGame/PipeScore.js"></script>
     <script src="JS/TrangGame/BanDoGame.js"></script>
     <script src="JS/TrangGame/CheDoAI.js"></script>
   
@@ -1386,7 +1404,9 @@
       })();
     </script>
     <script src="JS/TrangGame/PvpSocket.js"></script>
+    <script src="JS/TrangGame/PvpActionQueue.js"></script>
     <script src="JS/TrangGame/PvpMatch.js"></script>
+    <script src="JS/TrangGame/PvpChat.js"></script>
 
   </body>
 </html>

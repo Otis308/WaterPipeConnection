@@ -124,8 +124,8 @@
                     <th>Độ khó</th>
                     <th>Số trận</th>
                     <th>Số trận thắng</th>
-                    <th>Điểm TB (AVG)</th>
-                    <th>Điểm Cao Nhất (MAX)</th>
+                    <th>Chất lượng TB (0–100, luật mới)</th>
+                    <th>Chất lượng cao nhất (luật mới)</th>
                     <th>Thời gian xử lý TB</th>
                     <th>Số bước TB</th>
                     <th>Tổng lần AI Restart</th>
@@ -138,8 +138,8 @@
                         <td><x-badge :difficulty="$r['difficulty']" /></td>
                         <td>{{ $r['total_matches'] }}</td>
                         <td class="text-success fw-bold">{{ $r['total_wins'] }}</td>
-                        <td>{{ $r['avg_score'] }} ⭐</td>
-                        <td class="text-warning fw-bold">{{ $r['max_score'] }} ⭐</td>
+                        <td>{{ $r['avg_score'] ?? '—' }}</td>
+                        <td class="text-warning fw-bold">{{ $r['max_score'] ?? '—' }}</td>
                         <td>{{ $r['avg_duration_sec'] }}s</td>
                         <td>{{ $r['avg_steps'] }} bước</td>
                         <td>{{ $r['total_ai_restarts'] }} lần</td>

@@ -206,6 +206,8 @@
     <div class="NutDangNhap am-thanh-click" id="nutDangNhap">
       Login | Register
     </div>
+     <a class="NutDangNhap am-thanh-click" id="myProfileLink" href="/profile"
+       style="top: 62px; text-decoration: none;" {{ empty($currentUser) ? 'hidden' : '' }}>Hồ sơ của tôi</a>
 
     <!-- BẢNG ĐĂNG NHẬP / ĐĂNG KÝ / QUÊN MẬT KHẨU (HIỂN THỊ LẦN LƯỢT TỪNG GIAO DIỆN) -->
     <div class="KhungDangNhap" id="khungDangNhap">
@@ -883,6 +885,7 @@
         async function performLogout() {
           await callApi("/api/auth/logout", "POST", {});
           window.currentAuthenticatedUser = null;
+          document.getElementById("myProfileLink").style.display = "none";
           sessionStorage.removeItem("huit_auth_token");
           sessionStorage.removeItem("huit_user_id");
           sessionStorage.removeItem("huit_username");
@@ -893,6 +896,7 @@
 
         function updateLoggedInUi(userObj) {
           if (!userObj) return;
+          document.getElementById("myProfileLink").style.display = "flex";
           const uid = userObj.user_id || userObj.id;
           nutDangNhap.innerText = userObj.username + (uid ? " (#" + uid + ")" : "");
           if (typeof window.capNhatHienThiDiemCao === "function") {

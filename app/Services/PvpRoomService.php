@@ -416,6 +416,7 @@ class PvpRoomService
                 'is_ready'          => (bool)$p['is_ready'],
                 'connection_status' => $p['connection_status'],
                 'current_score'     => (int)$p['current_score'],
+                'quality_score'     => json_decode($p['board_rotations_json'] ?? '{}', true)['scoring']['quality_score'] ?? null,
                 'completed_pairs'   => (int)$p['completed_pairs'],
                 'total_pairs'       => (int)$p['total_pairs'],
                 'solve_status'      => $p['solve_status'],
@@ -427,7 +428,7 @@ class PvpRoomService
 
         $mapData = null;
         if (!empty($room['map_config_json'])) {
-            $mapData = json_decode($room['map_config_json'], true);
+            $mapData = PvpMapService::publicMapPayload(json_decode($room['map_config_json'], true) ?: []);
         }
 
         return [

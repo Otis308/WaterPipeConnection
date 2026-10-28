@@ -7,6 +7,7 @@ use App\Rules\NoForbiddenWords;
 use App\Rules\ValidMapDimension;
 use App\Services\PdoDatabaseService;
 
+
 /**
  * Class GameLevelController
  * Minh họa Bài 7, Bài 8 & Bài 9 (Resource Controller 7 actions chuẩn RESTful):
@@ -30,7 +31,7 @@ class GameLevelController extends Controller
     /**
      * Action 1/7: GET /levels (levels.index)
      */
-    public function index()
+    public function index($request = null)
     {
         $keyword = trim($_GET['keyword'] ?? '');
         $difficulty = trim($_GET['difficulty'] ?? '');
@@ -47,7 +48,7 @@ class GameLevelController extends Controller
     /**
      * Action 2/7: GET /levels/create (levels.create)
      */
-    public function create()
+    public function create($request = null)
     {
         $currentUser = $_SESSION['huit_auth_user'] ?? null;
         if (!$currentUser || !in_array($currentUser['role'], ['admin', 'staff'], true)) {
@@ -65,7 +66,7 @@ class GameLevelController extends Controller
     /**
      * Action 3/7: POST /levels (levels.store)
      */
-    public function store()
+    public function store($request = null)
     {
         $currentUser = $_SESSION['huit_auth_user'] ?? null;
         if (!$currentUser || !in_array($currentUser['role'], ['admin', 'staff'], true)) {

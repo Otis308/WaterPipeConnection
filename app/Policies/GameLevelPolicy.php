@@ -26,7 +26,7 @@ class GameLevelPolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->role, ['admin', 'staff'], true);
+        return in_array($user->{'role'}, ['admin', 'staff'], true);
     }
 
     /**
@@ -34,10 +34,10 @@ class GameLevelPolicy
      */
     public function update(User $user, GameLevel $level): bool
     {
-        if ($user->role === 'admin') {
+        if ($user->{'role'} === 'admin') {
             return true;
         }
-        return $user->role === 'staff' && (int)$level->created_by === (int)$user->id;
+        return $user->{'role'} === 'staff' && (int)$level->{'created_by'} === (int)$user->{'id'};
     }
 
     /**
@@ -45,10 +45,10 @@ class GameLevelPolicy
      */
     public function delete(User $user, GameLevel $level): bool
     {
-        if ($user->role === 'admin') {
+        if ($user->{'role'} === 'admin') {
             return true;
         }
-        return $user->role === 'staff' && (int)$level->created_by === (int)$user->id;
+        return $user->{'role'} === 'staff' && (int)$level->{'created_by'} === (int)$user->{'id'};
     }
 
     /**

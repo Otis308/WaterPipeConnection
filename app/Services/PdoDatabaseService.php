@@ -584,8 +584,10 @@ class PdoDatabaseService
                        difficulty,
                        COUNT(*) AS total_matches,
                        SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS total_wins,
-                       ROUND(AVG(score_earned), 1) AS avg_score,
-                       MAX(score_earned) AS max_score,
+                       ROUND(AVG(NULLIF(JSON_EXTRACT(CASE WHEN JSON_VALID(telemetry_nosql)
+                           THEN telemetry_nosql ELSE '{}' END, '$.quality_score'), 'null')), 1) AS avg_score,
+                       MAX(CAST(NULLIF(JSON_EXTRACT(CASE WHEN JSON_VALID(telemetry_nosql)
+                           THEN telemetry_nosql ELSE '{}' END, '$.quality_score'), 'null') AS DECIMAL(6,2))) AS max_score,
                        ROUND(AVG(duration_ms) / 1000.0, 2) AS avg_duration_sec,
                        ROUND(AVG(steps_count), 1) AS avg_steps,
                        SUM(ai_retries) AS total_ai_restarts
@@ -711,12 +713,21 @@ class PdoDatabaseService
         $difficulty = in_array($payload['difficulty'] ?? 'easy', ['easy', 'medium', 'hard'], true) ? $payload['difficulty'] : 'easy';
         $result = in_array($payload['result'] ?? 'win', ['win', 'lose', 'surrender'], true) ? $payload['result'] : 'win';
         $scoreEarned = max(0, (int)($payload['score_earned'] ?? 0));
+        $telemetry = $payload['telemetry_nosql'] ?? [];
+        if (!is_array($telemetry)) $telemetry = [];
+        if (($payload['scoring_version'] ?? '') === PipeScoringService::VERSION) {
+            $quality = $payload['quality_score'] ?? null;
+            $quality = is_int($quality) && $quality >= 0 && $quality <= 100 ? $quality : null;
+            $scoreEarned = $quality ?? 0;
+            $telemetry['scoring_version'] = PipeScoringService::VERSION;
+            $telemetry['quality_score'] = $quality;
+        }
         $totalScore = max(0, (int)($payload['total_score'] ?? $scoreEarned));
         $connectedPipes = max(0, (int)($payload['connected_pipes'] ?? 0));
         $stepsCount = max(0, (int)($payload['steps_count'] ?? 0));
         $aiRetries = max(0, (int)($payload['ai_retries'] ?? 0));
         $durationMs = max(0, (int)($payload['duration_ms'] ?? 0));
-        $telemetryJson = json_encode($payload['telemetry_nosql'] ?? ['mode' => $gameMode, 'mapSize' => $mapSize]);
+        $telemetryJson = json_encode($telemetry + ['mode' => $gameMode, 'mapSize' => $mapSize]);
 
         $stmt = $this->conn->prepare(
             "INSERT INTO game_sessions
@@ -817,17 +828,18 @@ class PdoDatabaseService
         ];
     }
 
-    public function getUserPvpMatchHistory(int $userId, int $limit = 20): array
+    public function getUserPvpMatchHistory(int $userId, int $limit = 20, int $offset = 0): array
     {
         $sql = "SELECT h.*, r.room_code, r.map_size, r.difficulty, r.num_pairs, r.map_seed
                 FROM pvp_match_history h
                 LEFT JOIN pvp_rooms r ON h.room_id = r.id
                 WHERE h.user_id = ?
-                ORDER BY h.id DESC
-                LIMIT ?";
+                ORDER BY h.created_at DESC, h.id DESC
+                LIMIT ? OFFSET ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(1, $userId, PDO::PARAM_INT);
         $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(3, max(0, $offset), PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -874,7 +886,15 @@ class PdoDatabaseService
         );
         $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) {
+            $telemetry = json_decode($row['telemetry_nosql'] ?? '{}', true) ?: [];
+            $row['score_label'] = ($telemetry['scoring_version'] ?? '') === PipeScoringService::VERSION
+                ? (isset($telemetry['quality_score']) ? $telemetry['quality_score'] . '/100' : 'Chưa xác định')
+                : $row['score_earned'] . ' (điểm cũ)';
+        }
+        unset($row);
+        return $rows;
     }
 
     /**

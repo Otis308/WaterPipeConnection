@@ -4,9 +4,13 @@ LABEL maintainer="Senior PHP Dev & Ph.D AI Engineering - HUIT Open Source Course
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-dev \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libwebp-dev \
     default-mysql-client \
     unzip \
-    && docker-php-ext-install pdo pdo_mysql pdo_sqlite mysqli \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install pdo pdo_mysql pdo_sqlite mysqli gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
